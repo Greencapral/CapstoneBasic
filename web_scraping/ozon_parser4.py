@@ -103,6 +103,7 @@ class OzonParser:
 
         products_data = []
         try:
+            # search_url = f"https://www.wildberries.ru/catalog/0/search?sort=popular&search={search_query}"
             search_url = f"https://www.ozon.ru/search/?text={search_query}"
             print(f"Открываем URL: {search_url}")
 
@@ -125,7 +126,7 @@ class OzonParser:
                     lambda driver: len(
                         driver.find_elements(
                             By.CSS_SELECTOR,
-                            "div.tile-root",
+                            "span.tsBody500Medium",
                         )
                     )
                     > 0
@@ -137,6 +138,10 @@ class OzonParser:
                 print(
                     f"Найдено товаров на странице: {len(page_products)}"
                 )
+
+                # if not self._go_to_next_page():  # Передаём sb в метод
+                #     break
+                # time.sleep(3)
 
         except WebDriverException as e:
             print(f"Ошибка WebDriver: {e}")
@@ -156,15 +161,15 @@ class OzonParser:
             # Упрощённый селектор для карточек товаров
             WebDriverWait(self.driver, 15).until(
                 EC.presence_of_all_elements_located(
-                    (By.CSS_SELECTOR, "div.tile-root")
+                    (By.CSS_SELECTOR, "a.tile-clickable-element")
                 )
             )
             WebDriverWait(self.driver, 30).until(
-                lambda driver: len(driver.find_elements(By.CSS_SELECTOR, "div.tile-root")) > 0
+                lambda driver: len(driver.find_elements(By.CSS_SELECTOR, "a.tile-clickable-element")) > 0
             )
 
             product_cards = self.driver.find_elements(
-                By.CSS_SELECTOR, "div.tile-root"
+                By.CSS_SELECTOR, "a.tile-clickable-element"
             )
             print(
                 f"Найдено карточек: {len(product_cards)}"
@@ -183,7 +188,6 @@ class OzonParser:
                 print("Таймаут ожидания загрузки цен — продолжаем парсинг с доступными данными")
 
             for card in product_cards:
-                # print(card.text)
                 try:
                     # Инициализируем product_id заранее
                     product_id = "unknown"
@@ -193,7 +197,7 @@ class OzonParser:
                         name_elem = card.find_element(
                             By.CSS_SELECTOR,
                             # "span.tsBody500Medium",
-                            "span.tsBody500Medium",
+                            "span[class*=\"tsBody500Medium\"]",
                         )
                         full_text = name_elem.text.strip()
 
@@ -201,7 +205,7 @@ class OzonParser:
                         cleaned_name = full_text.replace(
                             "/", ""
                         ).strip()
-                        name = cleaned_name
+                        name = 'cleaned_name'
                         print(name)
                     except NoSuchElementException:
                         print(
@@ -211,34 +215,57 @@ class OzonParser:
 
                     # Цена
                     try:
+                        print('!!!!!!')
+                        print("Ищем элемент цены с селектором:", "div.ji9_24 div.c35_3_13-a0 .tsHeadline500Medium")
+                        try:
+                            # price_elem = card.find_element(
+                            #     By.XPATH,
+                            #     ".//span[contains(@class, 'tsHeadline500Medium') and contains(text(), ' ₽')]",
+                            # )
+                            price_elem = card.find_element(
+                                By.CSS_SELECTOR,
+                                "div.ji9_24 div.c35_3_13-a0 .tsHeadline500Medium"
+                            )
+                            print("Элемент найден:", price_elem)
+                            print("Текст элемента:", repr(price_elem.text))  # repr() покажет пустые строки/пробелы
+                            print('????')
+                        except (ValueError, InvalidOperation, NoSuchElementException):
+                            price = Decimal("0.00")
+
                         price_elem = card.find_element(
-                        By.CSS_SELECTOR,
-                        "span.c35_3_13-a1.tsHeadline500Medium",
+                            By.CSS_SELECTOR,
+                            ".c35_3_13-a1.tsHeadline500Medium",
                         )
+
+                        print(price_elem)
+                        print(price_elem.text)
+                        print('????')
                         price_text = (
                             price_elem.text.strip()
                         )  # «8 903 ₽»
-                        if not price_text:
-                            raise NoSuchElementException("Цена не найдена ни по одному селектору")
+                        print(price_text)
 
-                        # Очищаем текст цены
-                        # Удаляем все нецифровые символы, кроме запятой/точки
-                        clean_price = re.sub(r"[^\d,.]", "", price_text)
-                        # Заменяем запятую на точку для Decimal
-                        clean_price = clean_price.replace(",", ".")
+                        # Очищаем текст: убираем символ ₽ и пробелы
+                        clean_price = (
+                            price_text.replace(" ₽", "")
+                            .replace(" ", "")
+                            .replace("\u00a0", "")
+                        )  # \u00A0 — код &nbsp;
 
                         # Преобразуем в Decimal
                         price = Decimal(clean_price)
-                        print(f"Цена: {price}")
-                    except (ValueError, InvalidOperation, NoSuchElementException) as e:
-                        print(f"Ошибка при парсинге цены: {e}")
+                    except (
+                            ValueError,
+                            InvalidOperation,
+                            NoSuchElementException,
+                    ):
                         price = Decimal("0.00")
 
                     # URL товара и извлечение ID
                     try:
                         link_elem = card.find_element(
                             By.CSS_SELECTOR,
-                            "a.tile-clickable-element",
+                            "a.tile-clickable-element[target=\"_blank\"]",
                         )
                         product_url = (
                             link_elem.get_attribute("href")
@@ -247,7 +274,7 @@ class OzonParser:
                         # Извлекаем ID из URL
                         if product_url:
                             product_id_match = re.search(
-                                r"(\d+)(?=\?at=)",
+                                r"/product/[^/]+/(\d+)",
                                 product_url,
                             )
                             if product_id_match:
@@ -258,8 +285,10 @@ class OzonParser:
                                 )
                             else:
                                 # Альтернативный ID: хеш от URL (ограничиваем до 8 цифр)
-                                hash_part = str(abs(hash(product_url)) % (10 ** 5)).zfill(5)
-                                product_id = "999" + hash_part
+                                product_id = str(
+                                    abs(hash(product_url))
+                                    % (10**8)
+                                )
                                 print(
                                     f"ID не найден в URL: {product_url}, сгенерирован ID: {product_id}"
                                 )
@@ -273,7 +302,7 @@ class OzonParser:
                     try:
                         image_elem = card.find_element(
                             By.CSS_SELECTOR,
-                            "img.b95_3_4-a",
+                            "a.tile-clickable-element img[loading=\"eager\"]",
                         )
                         image_url = (
                             image_elem.get_attribute("src")
@@ -302,6 +331,19 @@ class OzonParser:
             print(f"Общая ошибка парсинга страницы: {e}")
 
         return products
+
+    # def _go_to_next_page(self):
+    #     """Переход на следующую страницу с улучшенной обработкой"""
+    #     try:
+    #         # Ищем кнопку следующей страницы через SeleniumBase
+    #         if self.sb.is_element_visible(".pagination__next"):
+    #             self.sb.click(".pagination__next")
+    #             time.sleep(2)  # Ждём загрузки
+    #             return True
+    #         else:
+    #             return False
+    #     except (NoSuchElementException, TimeoutException):
+    #         return False
 
 
     @transaction.atomic
