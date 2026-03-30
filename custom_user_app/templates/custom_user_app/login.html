@@ -1,25 +1,107 @@
-{% extends 'web_scarping/base.html' %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Авторизация</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
 
+        .login-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 350px;
+        }
 
-{% block body %}
-    <h1>Вход в личный кабинет</h1>
+        h2 {
+            margin-bottom: 30px;
+            text-align: center;
+            color: #333;
+        }
 
-    <form method="post">
-        {% csrf_token %}
-        <div class="mb-3">
-            {{ form.username.label_tag }}
-            {{ form.username }}
-            {% if form.username.errors %}
-                <div class="text-danger">{{ form.username.errors }}</div>
-            {% endif %}
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .error {
+            color: red;
+            font-size: 14px;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Авторизация</h2>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="form-group">
+                {{ form.username.label_tag }}
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="error">{{ form.username.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label_tag }}
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="error">{{ form.password.errors }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit">Войти</button>
+        </form>
+
+        <div class="register-link">
+            <a href="{% url 'register' %}">Нет аккаунта? Зарегистрироваться</a>
         </div>
-        <div class="mb-3">
-            {{ form.password.label_tag }}
-            {{ form.password }}
-            {% if form.password.errors %}
-                <div class="text-danger">{{ form.password.errors }}</div>
-            {% endif %}
-        </div>
-        <button type="submit" class="btn btn-primary">Войти</button>
-    </form>
-{% endblock  %}
+    </div>
+</body>
+</html>
