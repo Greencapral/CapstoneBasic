@@ -1,0 +1,12 @@
+
+{% extends 'web_scarping/base.html' %}
+
+{% block header %} Вы вышли из аккаунта {% endblock %}
+
+{% block body %}
+    <h1>Вы успешно вышли из системы</h1>
+    <p class="mt-3">
+        <a href="{% url 'login' %}" class="btn btn-primary mt-3">Войти снова</a>
+        <a href="{% url 'post_list' %}" class="btn btn-secondary mt-3">Назад к списку</a>
+    </p>
+{% endblock %}
