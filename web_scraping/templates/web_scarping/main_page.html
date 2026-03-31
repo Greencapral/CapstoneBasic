@@ -134,7 +134,7 @@
             {% endif %}
             <a href="{% url 'register' %}">Регистрация</a>
             {% if user.is_authenticated %}
-                <a href="">Профиль</a>
+                <a href="/admin/">Профиль</a>
             {% endif %}
         </div>
     </div>
@@ -142,7 +142,7 @@
     <div class="search-container">
         <h2>Поиск товаров</h2>
 
-        <form method="GET">
+        <form action="{% url 'search_results' %}" method="get">
             <div class="form-group">
                 <label for="search">Что ищем:</label>
                 <input type="text" id="search" name="query" required>
