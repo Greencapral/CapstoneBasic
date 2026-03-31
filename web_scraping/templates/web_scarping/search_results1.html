@@ -1,0 +1,19 @@
+{% extends 'web_scarping/base.html' %}
+
+{% block body %}
+
+<h2>Результаты поиска по запросу: {{ query }}</h2>
+
+{% if products %}
+    <ul>
+        {% for product in products %}
+            <li>
+                {{ product.name }} - {{ product.price }} ₽
+                (Маркетплейс: {{ product.marketplace.name }})
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>Ничего не найдено</p>
+{% endif %}
+{% endblock %}
