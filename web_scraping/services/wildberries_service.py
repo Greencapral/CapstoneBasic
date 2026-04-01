@@ -1,5 +1,5 @@
 # services/wildberries_service.py
-from web_scraping.wildberries_parser import (
+from web_scraping.parcers.wildberries_parser import (
     WildberriesParser,
 )
 

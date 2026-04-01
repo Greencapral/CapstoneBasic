@@ -1,4 +1,4 @@
-from web_scraping.ozon_parser import (
+from web_scraping.parcers.ozon_parser import (
     OzonParser,
 )
 
