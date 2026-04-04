@@ -124,7 +124,8 @@
     <div class="search-container">
         <h2>Поиск товаров</h2>
 
-        <form action="{% url 'search_results' %}" method="get">
+        <form action="{% url 'query_list' %}" method="post">
+            {% csrf_token %}
             <div class="form-group">
                 <label for="search">Что ищем:</label>
                 <input type="text" id="search" name="query" required>

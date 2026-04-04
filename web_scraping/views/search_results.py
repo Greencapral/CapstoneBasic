@@ -1,5 +1,4 @@
 from django.shortcuts import render
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from web_scraping.models import Product, Marketplace
 
@@ -14,7 +13,7 @@ def search_results(request):
     for marketplace_name in marketplaces:
         try:
             marketplace = Marketplace.objects.get(name=marketplace_name)
-            marketplace_ids.append(marketplace.id)
+            marketplace_ids.append(marketplace.pk)
         except ObjectDoesNotExist:
             pass
 
