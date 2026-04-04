@@ -127,5 +127,5 @@ STATIC_URL = "static/"
 
 AUTH_USER_MODEL = "custom_user_app.CustomUser"
 
-SELENIUM_DRIVER = 'chrome'  # или 'firefox', 'edge'
+SELENIUM_DRIVER = "chrome"  # или 'firefox', 'edge'
 SELENIUM_HEADLESS = True  # запуск браузера в фоновом режиме (без GUI)

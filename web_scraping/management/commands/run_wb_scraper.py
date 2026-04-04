@@ -10,9 +10,7 @@ class Command(BaseCommand):
     help = "Запускает скрапинг товаров с Wildberries"
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "search_query", type=str, help="Строка поиска"
-        )
+        parser.add_argument("search_query", type=str, help="Строка поиска")
         parser.add_argument(
             "--max-pages",
             type=int,
@@ -34,6 +32,4 @@ class Command(BaseCommand):
             marketplace_id=1,
         )
         process.start()
-        self.stdout.write(
-            self.style.SUCCESS("Скрапинг завершён!")
-        )
+        self.stdout.write(self.style.SUCCESS("Скрапинг завершён!"))

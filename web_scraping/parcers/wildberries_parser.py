@@ -39,30 +39,20 @@ class WildberriesParser:
         # Базовые опции для обхода защиты
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument(
-            "--disable-blink-features=AutomationControlled"
-        )
+        options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option(
             "excludeSwitches", ["enable-automation"]
         )
-        options.add_experimental_option(
-            "useAutomationExtension", False
-        )
+        options.add_experimental_option("useAutomationExtension", False)
 
         # Дополнительные опции для маскировки
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-plugins")
         options.add_argument("--disable-popup-blocking")
         options.add_argument("--profile-directory=Default")
-        options.add_argument(
-            "--disable-background-timer-throttling"
-        )
-        options.add_argument(
-            "--disable-backgrounding-occluded-windows"
-        )
-        options.add_argument(
-            "--disable-renderer-backgrounding"
-        )
+        options.add_argument("--disable-background-timer-throttling")
+        options.add_argument("--disable-backgrounding-occluded-windows")
+        options.add_argument("--disable-renderer-backgrounding")
 
         # Разрешение экрана и User-Agent
         options.add_argument("--window-size=1920,1080")
@@ -70,21 +60,15 @@ class WildberriesParser:
         options.add_argument(f"--user-agent={user_agent}")
 
         try:
-            service = Service(
-                ChromeDriverManager().install()
-            )
-            self.driver = webdriver.Chrome(
-                service=service, options=options
-            )
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=options)
 
             # Удаляем флаг WebDriver
             self.driver.execute_script(
                 "Object.defineProperty(navigator, 'webdriver', {get: () => false});"
             )
 
-            self.marketplace = Marketplace.objects.get(
-                name="wildberries.ru"
-            )
+            self.marketplace = Marketplace.objects.get(name="wildberries.ru")
             print(
                 f"Marketplace найден: {self.marketplace}, ID: {self.marketplace.id}"
             )
@@ -108,9 +92,7 @@ class WildberriesParser:
 
             # Ждём загрузки страницы
             WebDriverWait(self.driver, 50).until(
-                EC.presence_of_element_located(
-                    (By.TAG_NAME, "body")
-                )
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
             print("Страница загружена успешно")
 
@@ -130,9 +112,7 @@ class WildberriesParser:
 
                 page_products = self._parse_current_page()
                 products_data.extend(page_products)
-                print(
-                    f"Найдено товаров на странице: {len(page_products)}"
-                )
+                print(f"Найдено товаров на странице: {len(page_products)}")
 
                 if not self._go_to_next_page():
                     break
@@ -162,9 +142,7 @@ class WildberriesParser:
             product_cards = self.driver.find_elements(
                 By.CSS_SELECTOR, ".product-card"
             )
-            print(
-                f"Найдено карточек: {len(product_cards)}"
-            )
+            print(f"Найдено карточек: {len(product_cards)}")
 
             for card in product_cards:
                 try:
@@ -180,9 +158,7 @@ class WildberriesParser:
                         full_text = name_elem.text.strip()
 
                         # Очищаем от разделителя «/» и лишних пробелов
-                        cleaned_name = full_text.replace(
-                            "/", ""
-                        ).strip()
+                        cleaned_name = full_text.replace("/", "").strip()
                         name = cleaned_name
                     except NoSuchElementException:
                         print(
@@ -196,9 +172,7 @@ class WildberriesParser:
                             By.CSS_SELECTOR,
                             ".price__lower-price",
                         )
-                        price_text = (
-                            price_elem.text.strip()
-                        )  # «8 903 ₽»
+                        price_text = price_elem.text.strip()  # «8 903 ₽»
 
                         # Очищаем текст: убираем символ ₽ и пробелы
                         clean_price = (
@@ -222,9 +196,7 @@ class WildberriesParser:
                             By.CSS_SELECTOR,
                             ".product-card__link",
                         )
-                        product_url = (
-                            link_elem.get_attribute("href")
-                        )
+                        product_url = link_elem.get_attribute("href")
 
                         # Извлекаем ID из URL
                         if product_url:
@@ -233,16 +205,11 @@ class WildberriesParser:
                                 product_url,
                             )
                             if product_id_match:
-                                product_id = (
-                                    product_id_match.group(
-                                        1
-                                    )
-                                )
+                                product_id = product_id_match.group(1)
                             else:
                                 # Альтернативный ID: хеш от URL (ограничиваем до 8 цифр)
                                 product_id = str(
-                                    abs(hash(product_url))
-                                    % (10**8)
+                                    abs(hash(product_url)) % (10**8)
                                 )
                                 print(
                                     f"ID не найден в URL: {product_url}, сгенерирован ID: {product_id}"
@@ -259,9 +226,7 @@ class WildberriesParser:
                             By.CSS_SELECTOR,
                             ".product-card__img-wrap .j-thumbnail",
                         )
-                        image_url = (
-                            image_elem.get_attribute("src")
-                        )
+                        image_url = image_elem.get_attribute("src")
                     except NoSuchElementException:
                         image_url = None
 
@@ -278,9 +243,7 @@ class WildberriesParser:
                         }
                     )
                 except Exception as card_error:
-                    print(
-                        f"Ошибка при парсинге карточки: {card_error}"
-                    )
+                    print(f"Ошибка при парсинге карточки: {card_error}")
                     continue
         except Exception as e:
             print(f"Общая ошибка парсинга страницы: {e}")
@@ -293,14 +256,10 @@ class WildberriesParser:
             next_button = self.driver.find_element(
                 By.CSS_SELECTOR, ".pagination__next"
             )
-            if "disabled" in next_button.get_attribute(
-                "class"
-            ):
+            if "disabled" in next_button.get_attribute("class"):
                 return False
             next_button.click()
-            WebDriverWait(self.driver, 15).until(
-                EC.staleness_of(next_button)
-            )
+            WebDriverWait(self.driver, 15).until(EC.staleness_of(next_button))
             return True
         except NoSuchElementException, TimeoutException:
             return False
@@ -312,7 +271,9 @@ class WildberriesParser:
 
         # Проверка, что marketplace корректно инициализирован
         if self.marketplace is None:
-            print("Ошибка: marketplace не инициализирован. Запускаем setup_driver()")
+            print(
+                "Ошибка: marketplace не инициализирован. Запускаем setup_driver()"
+            )
             self.setup_driver()
 
         for product_data in products_data:
@@ -321,19 +282,21 @@ class WildberriesParser:
                 try:
                     existing_product = Product.objects.get(
                         product_id=product_data["product_id"],
-                        marketplace=self.marketplace
+                        marketplace=self.marketplace,
                     )
                     # Если товар найден, проверяем изменение цены
                     if existing_product.price == product_data["price"]:
                         # Цена не изменилась — пропускаем обновление
                         print(
-                            f"Цена не изменилась для товара '{product_data['name']}' (ID: {product_data['product_id']}), пропускаем сохранение")
+                            f"Цена не изменилась для товара '{product_data['name']}' (ID: {product_data['product_id']}), пропускаем сохранение"
+                        )
                         continue
                     else:
                         # Цена изменилась — обновляем остальные поля
                         print(
                             f"Цена изменилась для товара '{product_data['name']}' (ID: {product_data['product_id']}): "
-                            f"{existing_product.price} → {product_data['price']}")
+                            f"{existing_product.price} → {product_data['price']}"
+                        )
                         # Обновляем только нужные поля
                         existing_product.name = product_data["name"]
                     existing_product.image_url = product_data.get("image_url")
@@ -350,17 +313,18 @@ class WildberriesParser:
                         name=product_data["name"],
                         price=product_data["price"],
                         image_url=product_data.get("image_url"),
-                        url=product_data.get("url")
+                        url=product_data.get("url"),
                     )
                     saved_count += 1
-                    print(f"Добавлен новый товар: '{product_data['name']}' (ID: {product_data['product_id']})")
+                    print(
+                        f"Добавлен новый товар: '{product_data['name']}' (ID: {product_data['product_id']})"
+                    )
 
             except Exception as save_error:
                 print(
                     f"Ошибка сохранения товара {product_data.get('name', 'Unknown')}: {save_error}"
                 )
             continue
-
 
         print(f"Успешно сохранено/обновлено {saved_count} товаров")
         return saved_count
@@ -415,14 +379,8 @@ class WildberriesParser:
             except:
                 pass
 
-    def run_search_and_save(
-        self, search_query, max_pages=3
-    ):
+    def run_search_and_save(self, search_query, max_pages=3):
         """Запуск полного процесса: поиск → парсинг → сохранение"""
-        products_data = self.search_products(
-            search_query, max_pages
-        )
-        saved_count = self.save_products_to_db(
-            products_data
-        )
+        products_data = self.search_products(search_query, max_pages)
+        saved_count = self.save_products_to_db(products_data)
         return saved_count, len(products_data)

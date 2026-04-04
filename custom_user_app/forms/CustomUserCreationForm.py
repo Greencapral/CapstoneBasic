@@ -40,18 +40,14 @@ class CustomUserCreationForm(UserCreationForm):
         email = self.cleaned_data.get("email").lower()
         user_model = get_user_model()
         if user_model.objects.filter(email=email).exists():
-            raise forms.ValidationError(
-                "Этот email уже занят"
-            )
+            raise forms.ValidationError("Этот email уже занят")
         return email
 
     def clean_username(self):
         """Проверяет уникальность username."""
         username = self.cleaned_data.get("username")
         user_model = get_user_model()
-        if user_model.objects.filter(
-            username=username
-        ).exists():
+        if user_model.objects.filter(username=username).exists():
             raise forms.ValidationError(
                 "Это имя пользователя уже занято. Пожалуйста, выберите другое."
             )

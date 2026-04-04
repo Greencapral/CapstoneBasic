@@ -3,11 +3,9 @@ __all__ = {
     "Marketplace",
     "Product",
     "Searchers",
-    "SearchersProduct",
 }
 
 from web_scraping.models.basemodel import BaseModel
 from web_scraping.models.marketplace import Marketplace
 from web_scraping.models.product import Product
 from web_scraping.models.searchers import Searchers
-from web_scraping.models.saerchers_product import SearchersProduct

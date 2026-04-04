@@ -20,7 +20,7 @@
                         <td>{{ search.user.username }}</td>
                         <td>{{ search.query }}</td>
                         <td>
-                            <a href="{% url 'search_results' search.query %}"
+                            <a href="{% url 'search_results' search.id %}"
                                class="btn btn-primary btn-sm">
                                 <i class="fas fa-search"></i> Показать результаты
                             </a>

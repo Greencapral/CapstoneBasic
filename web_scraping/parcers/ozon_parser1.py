@@ -7,7 +7,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import (
     expected_conditions as EC,
 )
-from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.action_chains import (
+    ActionChains,
+)
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
@@ -25,6 +27,7 @@ from web_scraping.models import (
     Product,
     Marketplace,
 )
+
 # import undetected_chromedriver as uc
 
 
@@ -44,30 +47,20 @@ class OzonParser:
         # Базовые опции для обхода защиты
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument(
-            "--disable-blink-features=AutomationControlled"
-        )
+        options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option(
             "excludeSwitches", ["enable-automation"]
         )
-        options.add_experimental_option(
-            "useAutomationExtension", False
-        )
+        options.add_experimental_option("useAutomationExtension", False)
 
         # Дополнительные опции для маскировки
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-plugins")
         options.add_argument("--disable-popup-blocking")
         options.add_argument("--profile-directory=Default")
-        options.add_argument(
-            "--disable-background-timer-throttling"
-        )
-        options.add_argument(
-            "--disable-backgrounding-occluded-windows"
-        )
-        options.add_argument(
-            "--disable-renderer-backgrounding"
-        )
+        options.add_argument("--disable-background-timer-throttling")
+        options.add_argument("--disable-backgrounding-occluded-windows")
+        options.add_argument("--disable-renderer-backgrounding")
 
         # Разрешение экрана и User-Agent
         options.add_argument("--window-size=1920,1080")
@@ -75,12 +68,8 @@ class OzonParser:
         options.add_argument(f"--user-agent={user_agent}")
 
         try:
-            service = Service(
-                ChromeDriverManager().install()
-            )
-            self.driver = webdriver.Chrome(
-                service=service, options=options
-            )
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=options)
             # self.driver = uc.Chrome(options=options)
 
             # # Удаляем флаг WebDriver
@@ -88,11 +77,11 @@ class OzonParser:
             #     "Object.defineProperty(navigator, 'webdriver', {get: () => false});"
             # )
             # Удаление признака автоматизации
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-
-            self.marketplace = Marketplace.objects.get(
-                name="ozon.ru"
+            self.driver.execute_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
             )
+
+            self.marketplace = Marketplace.objects.get(name="ozon.ru")
             print(
                 f"Marketplace найден: {self.marketplace}, ID: {self.marketplace.id}"
             )
@@ -140,7 +129,6 @@ class OzonParser:
         # if not self.sb:
         #     self.setup_driver()
 
-
         products_data = []
         try:
             # search_url = f"https://www.wildberries.ru/catalog/0/search?sort=popular&search={search_query}"
@@ -152,9 +140,7 @@ class OzonParser:
 
             # Ждём загрузки страницы
             WebDriverWait(self.driver, 50).until(
-                EC.presence_of_element_located(
-                    (By.TAG_NAME, "body")
-                )
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
             print("Страница загружена успешно")
 
@@ -164,7 +150,6 @@ class OzonParser:
             # self.sb.uc_open_with_reconnect(search_url, reconnect_time=4)
             #
             # print("Страница загружена успешно")
-
 
             for page in range(max_pages):
                 print(f"Парсинг страницы {page + 1}...")
@@ -187,12 +172,9 @@ class OzonParser:
                 # )
                 # print("Карточки товаров загружены")
 
-
                 page_products = self._parse_current_page()
                 products_data.extend(page_products)
-                print(
-                    f"Найдено товаров на странице: {len(page_products)}"
-                )
+                print(f"Найдено товаров на странице: {len(page_products)}")
 
                 # if not self._go_to_next_page():
                 if not self._go_to_next_page():  # Передаём sb в метод
@@ -217,11 +199,20 @@ class OzonParser:
             # Упрощённый селектор для карточек товаров
             WebDriverWait(self.driver, 15).until(
                 EC.presence_of_all_elements_located(
-                    (By.CSS_SELECTOR, "a.tile-clickable-element")
+                    (
+                        By.CSS_SELECTOR,
+                        "a.tile-clickable-element",
+                    )
                 )
             )
             WebDriverWait(self.driver, 30).until(
-                lambda driver: len(driver.find_elements(By.CSS_SELECTOR, "a.tile-clickable-element")) > 0
+                lambda driver: len(
+                    driver.find_elements(
+                        By.CSS_SELECTOR,
+                        "a.tile-clickable-element",
+                    )
+                )
+                > 0
             )
             # # Ждём загрузки карточек через SeleniumBase
             # # self.sb.wait_for_element_visible("a.tile-clickable-element", timeout=30)
@@ -230,9 +221,7 @@ class OzonParser:
             product_cards = self.driver.find_elements(
                 By.CSS_SELECTOR, "a.tile-clickable-element"
             )
-            print(
-                f"Найдено карточек: {len(product_cards)}"
-            )
+            print(f"Найдено карточек: {len(product_cards)}")
 
             for card in product_cards:
                 try:
@@ -249,9 +238,7 @@ class OzonParser:
                         print(full_text)
 
                         # Очищаем от разделителя «/» и лишних пробелов
-                        cleaned_name = full_text.replace(
-                            "/", ""
-                        ).strip()
+                        cleaned_name = full_text.replace("/", "").strip()
                         name = cleaned_name
                     except NoSuchElementException:
                         print(
@@ -265,9 +252,7 @@ class OzonParser:
                             By.CSS_SELECTOR,
                             "span.tsHeadline500Medium",
                         )
-                        price_text = (
-                            price_elem.text.strip()
-                        )  # «8 903 ₽»
+                        price_text = price_elem.text.strip()  # «8 903 ₽»
 
                         # Очищаем текст: убираем символ ₽ и пробелы
                         clean_price = (
@@ -289,11 +274,9 @@ class OzonParser:
                     try:
                         link_elem = card.find_element(
                             By.CSS_SELECTOR,
-                            "a.tile-clickable-element[target=\"_blank\"]",
+                            'a.tile-clickable-element[target="_blank"]',
                         )
-                        product_url = (
-                            link_elem.get_attribute("href")
-                        )
+                        product_url = link_elem.get_attribute("href")
 
                         # Извлекаем ID из URL
                         if product_url:
@@ -302,16 +285,11 @@ class OzonParser:
                                 product_url,
                             )
                             if product_id_match:
-                                product_id = (
-                                    product_id_match.group(
-                                        1
-                                    )
-                                )
+                                product_id = product_id_match.group(1)
                             else:
                                 # Альтернативный ID: хеш от URL (ограничиваем до 8 цифр)
                                 product_id = str(
-                                    abs(hash(product_url))
-                                    % (10**8)
+                                    abs(hash(product_url)) % (10**8)
                                 )
                                 print(
                                     f"ID не найден в URL: {product_url}, сгенерирован ID: {product_id}"
@@ -326,11 +304,9 @@ class OzonParser:
                     try:
                         image_elem = card.find_element(
                             By.CSS_SELECTOR,
-                            "a.tile-clickable-element img[loading=\"eager\"]",
+                            'a.tile-clickable-element img[loading="eager"]',
                         )
-                        image_url = (
-                            image_elem.get_attribute("src")
-                        )
+                        image_url = image_elem.get_attribute("src")
                     except NoSuchElementException:
                         image_url = None
 
@@ -347,9 +323,7 @@ class OzonParser:
                         }
                     )
                 except Exception as card_error:
-                    print(
-                        f"Ошибка при парсинге карточки: {card_error}"
-                    )
+                    print(f"Ошибка при парсинге карточки: {card_error}")
                     continue
         except Exception as e:
             print(f"Общая ошибка парсинга страницы: {e}")
@@ -366,7 +340,7 @@ class OzonParser:
                 return True
             else:
                 return False
-        except (NoSuchElementException, TimeoutException):
+        except NoSuchElementException, TimeoutException:
             return False
 
     # @transaction.atomic
@@ -443,21 +417,15 @@ class OzonParser:
 
         for product_data in products_data:
             try:
-                product, created = (
-                    Product.objects.update_or_create(
-                        product_id=product_data[
-                            "product_id"
-                        ],
-                        marketplace=self.marketplace,
-                        defaults={
-                            "name": product_data["name"],
-                            "price": product_data["price"],
-                            "image_url": product_data.get(
-                                "image_url"
-                            ),
-                            "url": product_data.get("url"),
-                        },
-                    )
+                product, created = Product.objects.update_or_create(
+                    product_id=product_data["product_id"],
+                    marketplace=self.marketplace,
+                    defaults={
+                        "name": product_data["name"],
+                        "price": product_data["price"],
+                        "image_url": product_data.get("image_url"),
+                        "url": product_data.get("url"),
+                    },
                 )
                 if created:
                     saved_count += 1
@@ -466,9 +434,7 @@ class OzonParser:
                     f"Ошибка сохранения товара {product_data.get('name', 'Unknown')}: {save_error}"
                 )
                 continue
-        print(
-            f"Успешно сохранено {saved_count} новых товаров"
-        )
+        print(f"Успешно сохранено {saved_count} новых товаров")
         return saved_count
 
     def close(self):
@@ -478,6 +444,7 @@ class OzonParser:
                 self.driver.quit()
             except:
                 pass
+
     # def close(self):
     #     """Безопасное закрытие драйвера"""
     #     if self.sb:
@@ -494,8 +461,8 @@ class OzonParser:
 
         # Получаем размер окна браузера
         window_size = self.driver.get_window_size()
-        max_x = window_size['width'] - 50  # отступ от края
-        max_y = window_size['height'] - 50
+        max_x = window_size["width"] - 50  # отступ от края
+        max_y = window_size["height"] - 50
 
         if max_x <= 0 or max_y <= 0:
             # Если окно слишком маленькое, используем стандартные значения
@@ -508,7 +475,8 @@ class OzonParser:
             try:
                 actions.move_to_element_with_offset(
                     self.driver.find_element(By.TAG_NAME, "body"),
-                    x, y
+                    x,
+                    y,
                 ).perform()
                 time.sleep(random.uniform(0.5, 1.5))
             except Exception as e:
@@ -516,7 +484,8 @@ class OzonParser:
                 # Возвращаем курсор в центр экрана
                 actions.move_to_element_with_offset(
                     self.driver.find_element(By.TAG_NAME, "body"),
-                    max_x // 2, max_y // 2
+                    max_x // 2,
+                    max_y // 2,
                 ).perform()
 
         # Прокрутка страницы с плавным движением
@@ -527,21 +496,20 @@ class OzonParser:
             time.sleep(random.uniform(1, 3))
 
             # Дополнительная случайная прокрутка
-            scroll_position = random.uniform(0.3, 0.7) * self.driver.execute_script(
-                "return document.body.scrollHeight;")
-            self.driver.execute_script(f"window.scrollTo(0, {scroll_position});")
+            scroll_position = random.uniform(
+                0.3, 0.7
+            ) * self.driver.execute_script(
+                "return document.body.scrollHeight;"
+            )
+            self.driver.execute_script(
+                f"window.scrollTo(0, {scroll_position});"
+            )
             time.sleep(random.uniform(1, 2))
         except Exception as e:
             print(f"Ошибка прокрутки: {e}")
 
-    def run_search_and_save(
-        self, search_query, max_pages=3
-    ):
+    def run_search_and_save(self, search_query, max_pages=3):
         """Запуск полного процесса: поиск → парсинг → сохранение"""
-        products_data = self.search_products(
-            search_query, max_pages
-        )
-        saved_count = self.save_products_to_db(
-            products_data
-        )
+        products_data = self.search_products(search_query, max_pages)
+        saved_count = self.save_products_to_db(products_data)
         return saved_count, len(products_data)

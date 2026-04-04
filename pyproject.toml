@@ -20,4 +20,4 @@ dev = [
 ]
 
 [tool.black]
-line-length = 59
+line-length = 79

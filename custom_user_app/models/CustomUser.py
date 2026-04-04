@@ -25,9 +25,7 @@ class CustomUserManager(BaseUserManager):
             )
 
         email = self.normalize_email(email)
-        user = self.model(
-            username=username, email=email, **extra_fields
-        )
+        user = self.model(username=username, email=email, **extra_fields)
 
         user.password = make_password(password)
         user.save(using=self._db)
@@ -45,9 +43,7 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
 
-        return self.create_user(
-            username, email, password, **extra_fields
-        )
+        return self.create_user(username, email, password, **extra_fields)
 
 
 class CustomUser(AbstractUser):
@@ -57,17 +53,13 @@ class CustomUser(AbstractUser):
         unique=True,
         verbose_name="Имя пользователя.",
     )
-    email = models.EmailField(
-        unique=True, verbose_name="Электронная почта"
-    )
+    email = models.EmailField(unique=True, verbose_name="Электронная почта")
 
     created_at = models.DateTimeField(
         auto_now_add=True, verbose_name="Создано"
     )
 
-    updated_at = models.DateTimeField(
-        auto_now=True, verbose_name="Изменено"
-    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Изменено")
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["email"]
 

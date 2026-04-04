@@ -2,9 +2,10 @@ from django.shortcuts import render
 from django.core.exceptions import ObjectDoesNotExist
 from web_scraping.models import Product, Marketplace
 
+
 def search_results(request):
-    query = request.GET.get('query', '').strip()
-    marketplaces = request.GET.getlist('marketplaces[]')
+    query = request.GET.get("query", "").strip()
+    marketplaces = request.GET.getlist("marketplaces[]")
 
     # Получаем все площадки для отображения в фильтре
     all_marketplaces = Marketplace.objects.all()
@@ -30,10 +31,14 @@ def search_results(request):
     print("Products:", products.count())
 
     context = {
-        'products': products,
-        'query': query,
-        'all_marketplaces': all_marketplaces,
-        'selected_marketplaces': marketplaces,  # Для отметки выбранных площадок
+        "products": products,
+        "query": query,
+        "all_marketplaces": all_marketplaces,
+        "selected_marketplaces": marketplaces,  # Для отметки выбранных площадок
     }
 
-    return render(request, 'web_scarping/search_results.html', context=context)
+    return render(
+        request,
+        "web_scarping/search_results.html",
+        context=context,
+    )

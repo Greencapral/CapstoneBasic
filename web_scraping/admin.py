@@ -12,9 +12,7 @@ class MarketplaceAdmin(admin.ModelAdmin):
 
     list_filter = ("name",)
     search_fields = ("name",)
-    search_help_text = (
-        "Введите наименование площадки для поиска"
-    )
+    search_help_text = "Введите наименование площадки для поиска"
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
     readonly_fields = ("created_at", "updated_at")
@@ -36,9 +34,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
     list_filter = ("name",)
     search_fields = ("name",)
-    search_help_text = (
-        "Введите наименование товара для поиска"
-    )
+    search_help_text = "Введите наименование товара для поиска"
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
     readonly_fields = ("created_at", "updated_at")

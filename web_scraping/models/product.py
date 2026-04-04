@@ -4,9 +4,7 @@ from web_scraping.models import BaseModel
 
 class Product(BaseModel):
 
-    name = models.CharField(
-        max_length=100, verbose_name="Название товара"
-    )
+    name = models.CharField(max_length=100, verbose_name="Название товара")
 
     marketplace = models.ForeignKey(
         "Marketplace",
@@ -41,4 +39,6 @@ class Product(BaseModel):
         return self.name
 
     def __repr__(self):
-        return f"<Product id={self.id}, name='{self.name}', price={self.price}>"
+        return (
+            f"<Product id={self.id}, name='{self.name}', price={self.price}>"
+        )
