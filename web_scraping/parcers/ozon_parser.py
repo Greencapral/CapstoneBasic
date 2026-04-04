@@ -34,6 +34,7 @@ class OzonParser:
         self.driver = None
         self.sb = None
         self.marketplace = None
+        self.search_query = None
 
     def setup_driver(self):
         """Настройка драйвера браузера с улучшенной обработкой ошибок"""
@@ -150,21 +151,21 @@ class OzonParser:
                 By.CSS_SELECTOR, "div.tile-root"
             )
             print(f"Найдено карточек: {len(product_cards)}")
-            # ДОБАВЛЕННЫЙ КОД: ожидание загрузки ВСЕХ цен на странице
-            try:
-                WebDriverWait(self.driver, 30).until(
-                    EC.visibility_of_element_located(
-                        (
-                            By.CSS_SELECTOR,
-                            "div.ji9_24 div.c35_3_13-a0 .tsHeadline500Medium",
-                        )
-                    )
-                )
-                print("Все элементы с ценами загружены")
-            except TimeoutException:
-                print(
-                    "Таймаут ожидания загрузки цен — продолжаем парсинг с доступными данными"
-                )
+            # # ДОБАВЛЕННЫЙ КОД: ожидание загрузки ВСЕХ цен на странице
+            # try:
+            #     WebDriverWait(self.driver, 30).until(
+            #         EC.visibility_of_element_located(
+            #             (
+            #                 By.CSS_SELECTOR,
+            #                 "div.ji9_24 div.c35_3_13-a0 .tsHeadline500Medium",
+            #             )
+            #         )
+            #     )
+            #     print("Все элементы с ценами загружены")
+            # except TimeoutException:
+            #     print(
+            #         "Таймаут ожидания загрузки цен — продолжаем парсинг с доступными данными"
+            #     )
 
             for card in product_cards:
                 # print(card.text)
@@ -195,7 +196,7 @@ class OzonParser:
                     try:
                         price_elem = card.find_element(
                             By.CSS_SELECTOR,
-                            "span.c35_3_13-a1.tsHeadline500Medium",
+                            "span.c35_3_15-a1.tsHeadline500Medium",
                         )
                         price_text = price_elem.text.strip()  # «8 903 ₽»
                         if not price_text:
@@ -283,8 +284,9 @@ class OzonParser:
 
     @transaction.atomic
     def save_products_to_db(self, products_data):
-        """Сохранение данных в базу с обработкой дубликатов"""
+        """Сохранение данных в базу с обработкой дубликатов и проверкой изменения цены"""
         saved_count = 0
+        all_product_ids = []
 
         # Проверка, что marketplace корректно инициализирован
         if self.marketplace is None:
@@ -295,25 +297,100 @@ class OzonParser:
 
         for product_data in products_data:
             try:
-                product, created = Product.objects.update_or_create(
-                    product_id=product_data["product_id"],
-                    marketplace=self.marketplace,
-                    defaults={
-                        "name": product_data["name"],
-                        "price": product_data["price"],
-                        "image_url": product_data.get("image_url"),
-                        "url": product_data.get("url"),
-                    },
-                )
-                if created:
+                all_product_ids.append(product_data["product_id"])
+                # Пытаемся найти существующий товар в базе
+                try:
+                    existing_product = Product.objects.get(
+                        product_id=product_data["product_id"],
+                        marketplace=self.marketplace,
+                    )
+                    # Если товар найден, проверяем изменение цены
+                    if existing_product.price == product_data["price"]:
+                        # Цена не изменилась — пропускаем обновление
+                        print(
+                            f"Цена не изменилась для товара '{product_data['name']}' (ID: {product_data['product_id']}), пропускаем сохранение"
+                        )
+                        continue
+                    else:
+                        # Цена изменилась — обновляем остальные поля
+                        print(
+                            f"Цена изменилась для товара '{product_data['name']}' (ID: {product_data['product_id']}): "
+                            f"{existing_product.price} → {product_data['price']}"
+                        )
+                        # Обновляем только нужные поля
+                        existing_product.name = product_data["name"]
+                        existing_product.image_url = product_data.get("image_url")
+                        existing_product.url = product_data.get("url")
+                        existing_product.price = product_data["price"]
+                        existing_product.save()
+                        saved_count += 1
+
+                except Product.DoesNotExist:
+                    # Товар не найден в базе — создаём новый
+                    new_product = Product.objects.create(
+                        product_id=product_data["product_id"],
+                        marketplace=self.marketplace,
+                        name=product_data["name"],
+                        price=product_data["price"],
+                        image_url=product_data.get("image_url"),
+                        url=product_data.get("url"),
+                    )
                     saved_count += 1
-            except Exception as save_error:
-                print(
-                    f"Ошибка сохранения товара {product_data.get('name', 'Unknown')}: {save_error}"
-                )
+                    print(
+                        f"Добавлен новый товар: '{product_data['name']}' (ID: {product_data['product_id']})"
+                    )
+
+                except Exception as save_error:
+                    print(
+                        f"Ошибка сохранения товара {product_data.get('name', 'Unknown')}: {save_error}"
+                    )
+                    continue
+
+            except Exception as e:
+                print(f"Ошибка обработки товара: {e}")
                 continue
-        print(f"Успешно сохранено {saved_count} новых товаров")
-        return saved_count
+        print(f"Успешно сохранено/обновлено {saved_count} товаров")
+        return {
+            "saved_count": saved_count,
+            "total_found": len(products_data),
+            "search_query": self.search_query,
+            "product_ids": all_product_ids  # Возвращаем список ID
+        }
+
+
+    # @transaction.atomic
+    # def save_products_to_db(self, products_data):
+    #     """Сохранение данных в базу с обработкой дубликатов"""
+    #     saved_count = 0
+    #
+    #     # Проверка, что marketplace корректно инициализирован
+    #     if self.marketplace is None:
+    #         print(
+    #             "Ошибка: marketplace не инициализирован. Запускаем setup_driver()"
+    #         )
+    #         self.setup_driver()
+    #
+    #     for product_data in products_data:
+    #         try:
+    #             product, created = Product.objects.update_or_create(
+    #                 product_id=product_data["product_id"],
+    #                 marketplace=self.marketplace,
+    #                 defaults={
+    #                     "name": product_data["name"],
+    #                     "price": product_data["price"],
+    #                     "image_url": product_data.get("image_url"),
+    #                     "url": product_data.get("url"),
+    #                 },
+    #             )
+    #             if created:
+    #                 saved_count += 1
+    #         except Exception as save_error:
+    #             print(
+    #                 f"Ошибка сохранения товара {product_data.get('name', 'Unknown')}: {save_error}"
+    #             )
+    #             continue
+    #     print(f"Успешно сохранено {saved_count} новых товаров")
+    #     return saved_count
 
     def close(self):
         """Безопасное закрытие драйвера"""
@@ -362,6 +439,20 @@ class OzonParser:
 
     def run_search_and_save(self, search_query, max_pages=3):
         """Запуск полного процесса: поиск → парсинг → сохранение"""
+        print('Test3_2?')
         products_data = self.search_products(search_query, max_pages)
-        saved_count = self.save_products_to_db(products_data)
-        return saved_count, len(products_data)
+
+        # Сохраняем продукты и получаем результат с product_ids
+        save_result = self.save_products_to_db(products_data)
+
+        return (
+            save_result['saved_count'],  # Количество сохраненных товаров
+            len(products_data),  # Общее количество найденных товаров
+            save_result['product_ids']  # Список ID сохраненных товаров
+        )
+
+        # def run_search_and_save(self, search_query, max_pages=3):
+    #     """Запуск полного процесса: поиск → парсинг → сохранение"""
+    #     products_data = self.search_products(search_query, max_pages)
+    #     saved_count = self.save_products_to_db(products_data)
+    #     return saved_count, len(products_data)

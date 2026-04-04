@@ -5,10 +5,11 @@ from web_scraping.parcers.ozon_parser import (
 
 class OzonScrapingService:
     @staticmethod
-    def scrape_ozon(search_query, max_pages=3, headless=False):
+    def scrape_ozon(search_query, max_pages=1, headless=False):
         """Сервис для запуска парсинга Ozon"""
         parser = OzonParser(headless=headless)
-        saved_count, total_found = parser.run_search_and_save(
+        print('Test2_2?')
+        saved_count, total_found, product_ids = parser.run_search_and_save(
             search_query, max_pages
         )
 
@@ -16,4 +17,5 @@ class OzonScrapingService:
             "saved_count": saved_count,
             "total_found": total_found,
             "search_query": search_query,
+            "product_ids": product_ids
         }

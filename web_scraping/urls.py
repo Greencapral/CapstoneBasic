@@ -6,6 +6,7 @@ from web_scraping.views import (
     about,
     search_results,
     query_list,
+    query_result,
 )
 
 urlpatterns = [
@@ -19,7 +20,7 @@ urlpatterns = [
     ),
     path(
         "search_results/<int:search_id>/",
-        search_results,
-        name="search_results",
+        query_result,
+        name="query_result",
     ),
 ]
