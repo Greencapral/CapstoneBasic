@@ -7,7 +7,7 @@ from web_scraping.models import Searchers,Marketplace,Product
 def query_list(request):
     if request.method == 'POST':
         query = request.POST.get('query')
-        marketplace_domains = request.POST.getlist('marketplaces[]')
+        marketplaces = request.POST.getlist('marketplaces[]')
 
         if not query:
             return redirect('query_list')
@@ -21,8 +21,8 @@ def query_list(request):
 
             # Получаем ID маркетплейсов
             marketplace_ids = Marketplace.objects.filter(
-                domain__in=marketplace_domains
-            ).values_list('id', flat=True)
+                name__in=marketplaces
+            ).values_list('pk', flat=True)
 
             if not marketplace_ids:
                 # Если маркетплейсы не найдены

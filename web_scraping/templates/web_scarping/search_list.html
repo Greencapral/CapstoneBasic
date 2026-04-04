@@ -11,6 +11,7 @@
                     <tr>
                         <th>Пользователь</th>
                         <th>Поисковый запрос</th>
+                        <th>Маркетплейсы</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -20,6 +21,13 @@
                         <td>{{ search.user.username }}</td>
                         <td>{{ search.query }}</td>
                         <td>
+                            {% for marketplace in search.marketplaces.all %}
+                                {{ marketplace.name }}<br>
+                            {% empty %}
+                                Маркетплейсы не выбраны
+                            {% endfor %}
+                        </td>
+                        <td>
                             <a href="{% url 'search_results' search.id %}"
                                class="btn btn-primary btn-sm">
                                 <i class="fas fa-search"></i> Показать результаты
@@ -28,7 +36,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="text-center">
+                        <td colspan="4" class="text-center">
                             Записей не найдено
                         </td>
                     </tr>
