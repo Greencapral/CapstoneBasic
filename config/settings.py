@@ -154,10 +154,3 @@ AUTH_USER_MODEL = "custom_user_app.CustomUser"
 
 SELENIUM_DRIVER = "chrome"  # или 'firefox', 'edge'
 SELENIUM_HEADLESS = True  # запуск браузера в фоновом режиме (без GUI)
-
-print("=== DATABASE CONFIGURATION ===")
-print(f"DB NAME: {os.getenv('POSTGRES_DB')}")
-print(f"DB USER: {os.getenv('POSTGRES_USER')}")
-print(f"DB HOST: {os.getenv('POSTGRES_HOST')}")
-print(f"DB PORT: 5432")
-print("==============================")

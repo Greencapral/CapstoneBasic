@@ -4,6 +4,9 @@ set -e
 echo "Apply migrations.."
 python manage.py migrate
 
+echo "Load initial data from fixture..."
+python manage.py loaddata /app/fixtures/customusers_fixture.json
+
 echo "Collect static files.."
 python manage.py collectstatic --noinput
 

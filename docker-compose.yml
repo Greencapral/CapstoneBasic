@@ -35,6 +35,9 @@ services:
       selenium:
         condition: service_started
 
+    volumes:
+      - ./customusers_fixture.json:/app/fixtures/customusers_fixture.json  # монтируем файл с данными
+
   # Сервис базы данных PostgreSQL
   pg:
     # Используем готовый образ PostgreSQL 18.1 на базе Alpine Linux

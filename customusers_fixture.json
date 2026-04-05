@@ -1,0 +1,42 @@
+[
+{
+  "model": "custom_user_app.customuser",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$AmXJ90GeF5MYyhRc1pWtSM$SII7SPGkus45nJAVZ112989joeWE4koSJosC/gHPzWY=",
+    "last_login": "2026-04-05T20:32:32.171Z",
+    "is_superuser": true,
+    "first_name": "",
+    "last_name": "",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-04-04T16:52:45.079Z",
+    "username": "admin",
+    "email": "s@s.ru",
+    "created_at": "2026-04-04T16:52:45.982Z",
+    "updated_at": "2026-04-04T16:52:45.982Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "custom_user_app.customuser",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$Yx6vBAvf5HGu9aVWE3SIKa$PmezWlZ5t8xI98AZLOxoQwrAbaMoL4rzD5bBvZNSsns=",
+    "last_login": "2026-04-04T20:20:02.446Z",
+    "is_superuser": false,
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-04-04T20:20:01.454Z",
+    "username": "test1",
+    "email": "t@test.ru",
+    "created_at": "2026-04-04T20:20:02.434Z",
+    "updated_at": "2026-04-04T20:20:02.434Z",
+    "groups": [],
+    "user_permissions": []
+  }
+}
+]
