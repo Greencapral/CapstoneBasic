@@ -29,8 +29,21 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+]
 
+
+# Путь к статическим файлам (обязательно для collectstatic)
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Если используете collectstatic с дополнительными директориями
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 # Application definition
 
@@ -87,6 +100,16 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('POSTGRES_DB'),
+#         'USER': os.getenv('POSTGRES_USER'),
+#         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+#         'HOST': os.getenv('POSTGRES_HOST'),
+#         'PORT': '5432',
+#     }
+# }
 
 
 # Password validation
@@ -123,9 +146,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = "static/"
 
 AUTH_USER_MODEL = "custom_user_app.CustomUser"
 
 SELENIUM_DRIVER = "chrome"  # или 'firefox', 'edge'
 SELENIUM_HEADLESS = True  # запуск браузера в фоновом режиме (без GUI)
+
+print("=== DATABASE CONFIGURATION ===")
+print(f"DB NAME: {os.getenv('POSTGRES_DB')}")
+print(f"DB USER: {os.getenv('POSTGRES_USER')}")
+print(f"DB HOST: {os.getenv('POSTGRES_HOST')}")
+print(f"DB PORT: 5432")
+print("==============================")

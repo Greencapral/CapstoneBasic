@@ -1,0 +1,79 @@
+# Конфигурация Docker Compose для запуска приложения и базы данных
+# Описывает два сервиса: myapp (веб‑приложение) и pg (PostgreSQL)
+
+services:
+  # Сервис веб‑приложения
+  myapp:
+    # Настройки сборки образа
+    build:
+      # Контекст сборки — текущая директория (где расположен docker-compose.yml)
+      context: ./
+      # Путь к Dockerfile относительно контекста сборки
+      dockerfile: docker-build/app/Dockerfile
+
+    # Переменные окружения для приложения
+    environment:
+
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_HOST: "${POSTGRES_HOST}"
+      SECRET_KEY: ${SECRET_KEY}
+
+    # Команда запуска приложения внутри контейнера
+    command: ["/bin/sh", "/etc/entrypoint.sh"]
+
+    # Проброс портов: внешний порт 8000 → внутренний порт 8000 контейнера
+    ports:
+      - "8000:8000"
+
+
+    # Условие запуска: сервис myapp стартует только после того, как pg станет «здоровым»
+    depends_on:
+      pg:
+        condition: service_healthy  # Ждём, пока pg пройдёт healthcheck
+      selenium:
+        condition: service_started
+
+  # Сервис базы данных PostgreSQL
+  pg:
+    # Используем готовый образ PostgreSQL 18.1 на базе Alpine Linux
+    image: postgres:14-trixie
+
+    # Переменные окружения для настройки PostgreSQL
+    environment:
+      # Имя базы данных — берётся из переменной окружения хоста (${PG_DB})
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Пользователь базы данных — берётся из переменной окружения хоста (${PG_USER})
+      POSTGRES_USER: ${POSTGRES_USER}
+      # Пароль пользователя — берётся из переменной окружения хоста (${PG_PASSWORD})
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Директория для хранения данных PostgreSQL внутри контейнера
+      PGDATA: /var/lib/postgresql/18/docker
+
+    # Проброс портов (закомментирован): внешний порт 5432 → внутренний порт 5432
+    # Позволяет подключаться к БД извне (например, через psql или GUI‑клиент)
+      ports:
+       -"5432:5432"
+
+    # Монтирование тома для сохранения данных БД между перезапусками контейнеров
+    volumes:
+      - pg-data:/var/lib/postgresql  # Данные хранятся в томе pg-data
+
+    # Проверка работоспособности сервиса (healthcheck)
+    healthcheck:
+      # Команда для проверки: pg_isready проверяет готовность PostgreSQL
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 3s    # Проверяем каждые 1 секунду
+      timeout: 2s   # Таймаут ожидания ответа — 1 секунда
+      retries: 3    # Количество попыток перед признанием сервиса нерабочим
+
+  selenium:
+    image: selenium/standalone-chrome:latest
+    shm_size: 2gb
+    ports:
+      - "4444:4444"
+# Определение тома для хранения данных PostgreSQL
+# Том pg-data создаётся Docker и сохраняется между перезапусками контейнеров
+volumes:
+  pg-data:

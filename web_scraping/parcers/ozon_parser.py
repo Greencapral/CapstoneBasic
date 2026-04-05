@@ -67,8 +67,11 @@ class OzonParser:
 
         try:
             service = Service(ChromeDriverManager().install())
+            # if self.is_docker_container():
+            #     self.driver = webdriver.Chrome(service=service, options=options)
+            # else:
+            #     self.driver = webdriver.Remote(command_executor='http://selenium:4444/wd/hub', options=options)
             self.driver = webdriver.Chrome(service=service, options=options)
-
             # Удаление признака автоматизации
             self.driver.execute_script(
                 "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
@@ -400,3 +403,14 @@ class OzonParser:
             len(products_data),  # Общее количество найденных товаров
             save_result['product_ids']  # Список ID сохраненных товаров
         )
+
+    def is_docker_container(self):
+        try:
+            with open('/proc/1/cgroup', 'r') as f:
+                content = f.read()
+                # Ищем маркеры Docker, LXC, Kubernetes
+                if any(marker in content for marker in ['docker', 'lxc', 'kubepods']):
+                    return True
+        except (FileNotFoundError, PermissionError):
+            pass
+        return False

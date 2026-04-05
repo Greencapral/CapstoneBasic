@@ -62,6 +62,10 @@ class WildberriesParser:
 
         try:
             service = Service(ChromeDriverManager().install())
+            # if self.is_docker_container():
+            #     self.driver = webdriver.Chrome(service=service, options=options)
+            # else:
+            #     self.driver = webdriver.Remote(command_executor='http://selenium:4444/wd/hub', options=options)
             self.driver = webdriver.Chrome(service=service, options=options)
 
             # Удаляем флаг WebDriver
@@ -362,3 +366,13 @@ class WildberriesParser:
             save_result['product_ids']  # Список ID сохраненных товаров
         )
 
+    def is_docker_container(self):
+        try:
+            with open('/proc/1/cgroup', 'r') as f:
+                content = f.read()
+                # Ищем маркеры Docker, LXC, Kubernetes
+                if any(marker in content for marker in ['docker', 'lxc', 'kubepods']):
+                    return True
+        except (FileNotFoundError, PermissionError):
+            pass
+        return False
