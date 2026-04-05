@@ -29,9 +29,6 @@ def query_list(request):
             if not marketplace_ids:
                 return redirect('query_list')
 
-            # search.marketplaces.set(marketplace_ids)
-            # return redirect('query_list')
-
             search.marketplaces.set(marketplace_ids)
             all_product_ids = []  # Список для всех найденных ID
 

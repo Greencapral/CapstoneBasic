@@ -151,21 +151,6 @@ class OzonParser:
                 By.CSS_SELECTOR, "div.tile-root"
             )
             print(f"Найдено карточек: {len(product_cards)}")
-            # # ДОБАВЛЕННЫЙ КОД: ожидание загрузки ВСЕХ цен на странице
-            # try:
-            #     WebDriverWait(self.driver, 30).until(
-            #         EC.visibility_of_element_located(
-            #             (
-            #                 By.CSS_SELECTOR,
-            #                 "div.ji9_24 div.c35_3_13-a0 .tsHeadline500Medium",
-            #             )
-            #         )
-            #     )
-            #     print("Все элементы с ценами загружены")
-            # except TimeoutException:
-            #     print(
-            #         "Таймаут ожидания загрузки цен — продолжаем парсинг с доступными данными"
-            #     )
 
             for card in product_cards:
                 # print(card.text)
@@ -357,41 +342,6 @@ class OzonParser:
             "product_ids": all_product_ids  # Возвращаем список ID
         }
 
-
-    # @transaction.atomic
-    # def save_products_to_db(self, products_data):
-    #     """Сохранение данных в базу с обработкой дубликатов"""
-    #     saved_count = 0
-    #
-    #     # Проверка, что marketplace корректно инициализирован
-    #     if self.marketplace is None:
-    #         print(
-    #             "Ошибка: marketplace не инициализирован. Запускаем setup_driver()"
-    #         )
-    #         self.setup_driver()
-    #
-    #     for product_data in products_data:
-    #         try:
-    #             product, created = Product.objects.update_or_create(
-    #                 product_id=product_data["product_id"],
-    #                 marketplace=self.marketplace,
-    #                 defaults={
-    #                     "name": product_data["name"],
-    #                     "price": product_data["price"],
-    #                     "image_url": product_data.get("image_url"),
-    #                     "url": product_data.get("url"),
-    #                 },
-    #             )
-    #             if created:
-    #                 saved_count += 1
-    #         except Exception as save_error:
-    #             print(
-    #                 f"Ошибка сохранения товара {product_data.get('name', 'Unknown')}: {save_error}"
-    #             )
-    #             continue
-    #     print(f"Успешно сохранено {saved_count} новых товаров")
-    #     return saved_count
-
     def close(self):
         """Безопасное закрытие драйвера"""
         if self.driver:
@@ -450,9 +400,3 @@ class OzonParser:
             len(products_data),  # Общее количество найденных товаров
             save_result['product_ids']  # Список ID сохраненных товаров
         )
-
-        # def run_search_and_save(self, search_query, max_pages=3):
-    #     """Запуск полного процесса: поиск → парсинг → сохранение"""
-    #     products_data = self.search_products(search_query, max_pages)
-    #     saved_count = self.save_products_to_db(products_data)
-    #     return saved_count, len(products_data)
