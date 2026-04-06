@@ -1,0 +1,22 @@
+[
+{
+  "model": "web_scraping.marketplace",
+  "pk": 1,
+  "fields": {
+    "created_at": "2026-04-04T17:42:25.829Z",
+    "updated_at": "2026-04-04T17:42:25.829Z",
+    "name": "wildberries.ru",
+    "base_url": "https://www.wildberries.ru/catalog/0/search.aspx?search="
+  }
+},
+{
+  "model": "web_scraping.marketplace",
+  "pk": 2,
+  "fields": {
+    "created_at": "2026-04-04T17:42:53.998Z",
+    "updated_at": "2026-04-04T17:42:53.998Z",
+    "name": "ozon.ru",
+    "base_url": "https://www.ozon.ru/search/?text="
+  }
+}
+]

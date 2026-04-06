@@ -6,6 +6,7 @@ python manage.py migrate
 
 echo "Load initial data from fixture..."
 python manage.py loaddata /app/fixtures/customusers_fixture.json
+python manage.py loaddata /app/fixtures/marketplace_fixture.json
 
 echo "Collect static files.."
 python manage.py collectstatic --noinput
