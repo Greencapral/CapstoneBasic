@@ -35,15 +35,15 @@ def query_list(request):
             # Запускаем парсинг на выбранных маркетплейсах
             for marketplace in marketplaces:
                 if marketplace.name == 'ozon.ru':
-                    result = ozon_service.OzonScrapingService.scrape_ozon(
+                    result = ozon_service.scrape_ozon(
                         search_query=query,
                         headless=True
                     )
                     all_product_ids.extend(result.get('product_ids', []))
                     print(all_product_ids)
                 elif marketplace.name == 'wildberries.ru':
-                    print('test1')
-                    result = wildberries_service.WildberriesScrapingService.scrape_wildberries(
+                    print('test1 --wb--')
+                    result = wildberries_service.scrape_wb(
                         search_query=query,
                         headless=True
                     )

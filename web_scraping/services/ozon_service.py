@@ -1,21 +1,15 @@
-from web_scraping.parcers.ozon_parser import (
-    OzonParser,
-)
+from web_scraping.parcers import Parser, search_products_ozon
 
 
-class OzonScrapingService:
-    @staticmethod
-    def scrape_ozon(search_query, max_pages=1, headless=False):
-        """Сервис для запуска парсинга Ozon"""
-        parser = OzonParser(headless=headless)
-        print('Test2_2?')
-        saved_count, total_found, product_ids = parser.run_search_and_save(
-            search_query, max_pages
-        )
+def scrape_ozon(search_query, headless=False):
+    parser = Parser(name_mp="ozon.ru", headless=headless)
+    parser.setup_driver()
 
-        return {
-            "saved_count": saved_count,
-            "total_found": total_found,
-            "search_query": search_query,
-            "product_ids": product_ids
-        }
+    products_data = search_products_ozon(parser,search_query)
+    save_result = parser.save_products_to_db(products_data)
+    return {
+        "saved_count": save_result['saved_count'],
+        "total_found": len(products_data),
+        "search_query": search_query,
+        "product_ids": save_result['product_ids']
+    }

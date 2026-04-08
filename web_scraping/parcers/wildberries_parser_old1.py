@@ -1,4 +1,3 @@
-# web_scraping/wildberries_parser.py
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -32,28 +31,27 @@ class WildberriesParser:
         self.search_query = None
 
     def setup_driver(self):
-        """Настройка драйвера браузера с улучшенной обработкой ошибок"""
         options = Options()
         if self.headless:
             options.add_argument("--headless")
 
         # Базовые опции для обхода защиты
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--no-sandbox")#
+        options.add_argument("--disable-dev-shm-usage")#
+        options.add_argument("--disable-blink-features=AutomationControlled")#
         options.add_experimental_option(
             "excludeSwitches", ["enable-automation"]
-        )
-        options.add_experimental_option("useAutomationExtension", False)
+        )#
+        options.add_experimental_option("useAutomationExtension", False)#
 
         # Дополнительные опции для маскировки
-        options.add_argument("--disable-extensions")
-        options.add_argument("--disable-plugins")
-        options.add_argument("--disable-popup-blocking")
-        options.add_argument("--profile-directory=Default")
-        options.add_argument("--disable-background-timer-throttling")
-        options.add_argument("--disable-backgrounding-occluded-windows")
-        options.add_argument("--disable-renderer-backgrounding")
+        options.add_argument("--disable-extensions")#
+        options.add_argument("--disable-plugins")#
+        options.add_argument("--disable-popup-blocking")#
+        options.add_argument("--profile-directory=Default")#
+        options.add_argument("--disable-background-timer-throttling")#
+        options.add_argument("--disable-backgrounding-occluded-windows")#
+        options.add_argument("--disable-renderer-backgrounding")#
 
         # Разрешение экрана и User-Agent
         options.add_argument("--window-size=1920,1080")
@@ -66,9 +64,7 @@ class WildberriesParser:
                 self.driver = webdriver.Remote(command_executor='http://selenium:4444/wd/hub', options=options)
             else:
                 self.driver = webdriver.Chrome(service=service, options=options)
-            # self.driver = webdriver.Chrome(service=service, options=options)
 
-            # Удаляем флаг WebDriver
             self.driver.execute_script(
                 "Object.defineProperty(navigator, 'webdriver', {get: () => false});"
             )
@@ -82,7 +78,6 @@ class WildberriesParser:
             raise
 
     def search_products(self, search_query, max_pages=3):
-        """Поиск товаров с улучшенной обработкой ошибок"""
         if not self.driver:
             self.setup_driver()
 
@@ -94,7 +89,6 @@ class WildberriesParser:
             print(f"Открываем URL: {search_url}")
             self.driver.get(search_url)
 
-            # Ждём загрузки страницы
             WebDriverWait(self.driver, 50).until(
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
@@ -118,9 +112,7 @@ class WildberriesParser:
                 products_data.extend(page_products)
                 print(f"Найдено товаров на странице: {len(page_products)}")
 
-                # if not self._go_to_next_page():
-                #     break
-                # time.sleep(3)
+
 
         except WebDriverException as e:
             print(f"Ошибка WebDriver: {e}")
@@ -134,10 +126,8 @@ class WildberriesParser:
         return products_data
 
     def _parse_current_page(self):
-        """Парсинг товаров с актуальными селекторами для Wildberries"""
         products = []
         try:
-            # Упрощённый селектор для карточек товаров
             WebDriverWait(self.driver, 15).until(
                 EC.presence_of_all_elements_located(
                     (By.CSS_SELECTOR, ".product-card")
@@ -254,27 +244,12 @@ class WildberriesParser:
 
         return products
 
-    # def _go_to_next_page(self):
-    #     """Переход на следующую страницу с улучшенной обработкой"""
-    #     try:
-    #         next_button = self.driver.find_element(
-    #             By.CSS_SELECTOR, ".pagination__next"
-    #         )
-    #         if "disabled" in next_button.get_attribute("class"):
-    #             return False
-    #         next_button.click()
-    #         WebDriverWait(self.driver, 15).until(EC.staleness_of(next_button))
-    #         return True
-    #     except NoSuchElementException, TimeoutException:
-    #         return False
 
     @transaction.atomic
     def save_products_to_db(self, products_data):
-        """Сохранение данных в базу с обработкой дубликатов и проверкой изменения цены"""
         saved_count = 0
         all_product_ids = []
 
-        # Проверка, что marketplace корректно инициализирован
         if self.marketplace is None:
             print(
                 "Ошибка: marketplace не инициализирован. Запускаем setup_driver()"
@@ -284,21 +259,17 @@ class WildberriesParser:
         for product_data in products_data:
             try:
                 all_product_ids.append(product_data["product_id"])
-                # Пытаемся найти существующий товар в базе
                 try:
                     existing_product = Product.objects.get(
                         product_id=product_data["product_id"],
                         marketplace=self.marketplace,
                     )
-                    # Если товар найден, проверяем изменение цены
                     if existing_product.price == product_data["price"]:
-                        # Цена не изменилась — пропускаем обновление
                         print(
                             f"Цена не изменилась для товара '{product_data['name']}' (ID: {product_data['product_id']}), пропускаем сохранение"
                         )
                         continue
                     else:
-                        # Цена изменилась — обновляем остальные поля
                         print(
                             f"Цена изменилась для товара '{product_data['name']}' (ID: {product_data['product_id']}): "
                             f"{existing_product.price} → {product_data['price']}"
@@ -312,7 +283,6 @@ class WildberriesParser:
                         saved_count += 1
 
                 except Product.DoesNotExist:
-                    # Товар не найден в базе — создаём новый
                     new_product = Product.objects.create(
                         product_id=product_data["product_id"],
                         marketplace=self.marketplace,
@@ -340,11 +310,10 @@ class WildberriesParser:
             "saved_count": saved_count,
             "total_found": len(products_data),
             "search_query": self.search_query,
-            "product_ids": all_product_ids  # Возвращаем список ID
+            "product_ids": all_product_ids
         }
 
     def close(self):
-        """Безопасное закрытие драйвера"""
         if self.driver:
             try:
                 self.driver.quit()
@@ -352,16 +321,14 @@ class WildberriesParser:
                 pass
 
     def run_search_and_save(self, search_query, max_pages=3):
-        """Запуск полного процесса: поиск → парсинг → сохранение"""
         print('Test3?')
         products_data = self.search_products(search_query, max_pages)
 
-        # Сохраняем продукты и получаем результат с product_ids
         save_result = self.save_products_to_db(products_data)
 
         return (
-            save_result['saved_count'],  # Количество сохраненных товаров
-            len(products_data),  # Общее количество найденных товаров
-            save_result['product_ids']  # Список ID сохраненных товаров
+            save_result['saved_count'],
+            len(products_data),
+            save_result['product_ids']
         )
 
