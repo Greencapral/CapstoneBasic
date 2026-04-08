@@ -63,9 +63,9 @@ class WildberriesParser:
         try:
             service = Service(ChromeDriverManager().install())
             if is_docker_container():
-                self.driver = webdriver.Chrome(service=service, options=options)
-            else:
                 self.driver = webdriver.Remote(command_executor='http://selenium:4444/wd/hub', options=options)
+            else:
+                self.driver = webdriver.Chrome(service=service, options=options)
             # self.driver = webdriver.Chrome(service=service, options=options)
 
             # Удаляем флаг WebDriver
@@ -118,9 +118,9 @@ class WildberriesParser:
                 products_data.extend(page_products)
                 print(f"Найдено товаров на странице: {len(page_products)}")
 
-                if not self._go_to_next_page():
-                    break
-                time.sleep(3)
+                # if not self._go_to_next_page():
+                #     break
+                # time.sleep(3)
 
         except WebDriverException as e:
             print(f"Ошибка WebDriver: {e}")
@@ -254,19 +254,19 @@ class WildberriesParser:
 
         return products
 
-    def _go_to_next_page(self):
-        """Переход на следующую страницу с улучшенной обработкой"""
-        try:
-            next_button = self.driver.find_element(
-                By.CSS_SELECTOR, ".pagination__next"
-            )
-            if "disabled" in next_button.get_attribute("class"):
-                return False
-            next_button.click()
-            WebDriverWait(self.driver, 15).until(EC.staleness_of(next_button))
-            return True
-        except NoSuchElementException, TimeoutException:
-            return False
+    # def _go_to_next_page(self):
+    #     """Переход на следующую страницу с улучшенной обработкой"""
+    #     try:
+    #         next_button = self.driver.find_element(
+    #             By.CSS_SELECTOR, ".pagination__next"
+    #         )
+    #         if "disabled" in next_button.get_attribute("class"):
+    #             return False
+    #         next_button.click()
+    #         WebDriverWait(self.driver, 15).until(EC.staleness_of(next_button))
+    #         return True
+    #     except NoSuchElementException, TimeoutException:
+    #         return False
 
     @transaction.atomic
     def save_products_to_db(self, products_data):
@@ -343,7 +343,6 @@ class WildberriesParser:
             "product_ids": all_product_ids  # Возвращаем список ID
         }
 
-
     def close(self):
         """Безопасное закрытие драйвера"""
         if self.driver:
@@ -366,14 +365,3 @@ class WildberriesParser:
             save_result['product_ids']  # Список ID сохраненных товаров
         )
 
-    # @staticmethod
-    # def is_docker_container():
-    #     try:
-    #         with open('/proc/1/cgroup', 'r') as f:
-    #             content = f.read()
-    #             # Ищем маркеры Docker, LXC, Kubernetes
-    #             if any(marker in content for marker in ['docker', 'lxc', 'kubepods']):
-    #                 return True
-    #     except (FileNotFoundError, PermissionError):
-    #         pass
-    #     return False

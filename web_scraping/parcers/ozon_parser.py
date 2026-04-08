@@ -22,6 +22,7 @@ from decimal import Decimal, InvalidOperation
 import time
 import re
 
+
 from web_scraping.models import (
     Product,
     Marketplace,
@@ -69,9 +70,9 @@ class OzonParser:
         try:
             service = Service(ChromeDriverManager().install())
             if is_docker_container():
-                self.driver = webdriver.Chrome(service=service, options=options)
-            else:
                 self.driver = webdriver.Remote(command_executor='http://selenium:4444/wd/hub', options=options)
+            else:
+                self.driver = webdriver.Chrome(service=service, options=options)
             # self.driver = webdriver.Chrome(service=service, options=options)
             # Удаление признака автоматизации
             self.driver.execute_script(
@@ -99,11 +100,26 @@ class OzonParser:
             self.human_like_actions()
             self.driver.get(search_url)
 
+
+            # ДОБАВЛЕННЫЙ КОД: ожидание загрузки ВСЕХ цен на странице
+            try:
+                WebDriverWait(self.driver, 30).until(
+                    EC.visibility_of_element_located(
+                        (By.CSS_SELECTOR,
+                                "span.c35_3_15-a1.tsHeadline500Medium"
+                            )
+                         )
+                    )
+                print("Все элементы с ценами загружены")
+            except TimeoutException:
+                print("Таймаут ожидания загрузки цен — продолжаем парсинг с доступными данными")
+
+
             # Ждём загрузки страницы
-            WebDriverWait(self.driver, 50).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
-            print("Страница загружена успешно")
+            # WebDriverWait(self.driver, 50).until(
+            #     EC.presence_of_element_located((By.TAG_NAME, "body"))
+            # )
+            # print("Страница загружена успешно")
 
             for page in range(max_pages):
                 print(f"Парсинг страницы {page + 1}...")
@@ -221,7 +237,7 @@ class OzonParser:
                         # Извлекаем ID из URL
                         if product_url:
                             product_id_match = re.search(
-                                r"(\d+)(?=\?at=)",
+                                r"(\d+)\/[^/]*\?at=",
                                 product_url,
                             )
                             if product_id_match:
@@ -356,40 +372,74 @@ class OzonParser:
 
     def human_like_actions(self):
         """Имитация человеческого поведения с безопасной обработкой координат"""
-        actions = ActionChains(self.driver)
-
         try:
-            # Получаем размер окна с проверкой
+            # Получаем размер окна
             window_size = self.driver.get_window_size()
-            max_x = max(100, window_size["width"] - 50)
-            max_y = max(100, window_size["height"] - 50)
+            max_x = window_size["width"] - 100  # отступ от края
+            max_y = window_size["height"] - 100
 
-            # Случайные движения мыши
+            if max_x < 100 or max_y < 100:
+                print("Окно слишком маленькое для имитации действий")
+                return
+
+            actions = ActionChains(self.driver)
+
+            # Случайные движения мыши с абсолютными координатами
             for _ in range(random.randint(2, 5)):
+                # Генерируем случайные координаты в безопасных пределах
                 x = random.randint(50, max_x)
                 y = random.randint(50, max_y)
+
                 try:
-                    actions.move_by_offset(x, y).perform()
-                    time.sleep(random.uniform(0.5, 1.5))
-                    actions.reset_actions()  # Сброс действий
+                    # Используем move_to_location для абсолютных координат
+                    actions.w3c_actions.clear_actions()  # полный сброс
+                    actions.move_to_location(x, y).perform()
+                    time.sleep(random.uniform(0.3, 1.2))
                 except Exception as e:
                     print(f"Ошибка движения мыши в позиции ({x}, {y}): {e}")
                     continue
 
-            # Плавная прокрутка
-            self.driver.execute_script("window.scrollTo(0, 0);")
-            time.sleep(1)
+            # Плавная естественная прокрутка
+            scroll_height = self.driver.execute_script("return document.body.scrollHeight;")
+            current_scroll = 0
 
-            scroll_height = self.driver.execute_script(
-                "return document.body.scrollHeight;"
-            )
-            for i in range(3):
-                scroll_to = (scroll_height / 3) * (i + 1)
-                self.driver.execute_script(f"window.scrollTo(0, {scroll_to});")
-                time.sleep(random.uniform(1, 2))
+            while current_scroll < scroll_height:
+                # Случайная величина прокрутки (имитация реального поведения)
+                scroll_step = random.randint(100, 300)
+                current_scroll += scroll_step
+
+                # Ограничиваем прокрутку высотой страницы
+                if current_scroll > scroll_height:
+                    current_scroll = scroll_height
+
+                self.driver.execute_script(f"window.scrollTo(0, {current_scroll});")
+
+                # Случайная пауза между прокрутками
+                time.sleep(random.uniform(0.8, 2.0))
+
+                # Иногда останавливаемся и делаем случайное движение мыши
+                if random.random() < 0.3:  # 30% шанс
+                    x = random.randint(50, max_x)
+                    y = random.randint(50, max_y)
+                    try:
+                        actions.w3c_actions.clear_actions()
+                        actions.move_to_location(x, y).perform()
+                        time.sleep(random.uniform(0.2, 0.8))
+                    except:
+                        pass
+
+            # Финальное движение к центру экрана
+            center_x = window_size["width"] // 2
+            center_y = window_size["height"] // 2
+            try:
+                actions.w3c_actions.clear_actions()
+                actions.move_to_location(center_x, center_y).perform()
+            except:
+                pass
 
         except Exception as e:
             print(f"Критическая ошибка имитации действий: {e}")
+
 
     def run_search_and_save(self, search_query, max_pages=3):
         """Запуск полного процесса: поиск → парсинг → сохранение"""
@@ -405,14 +455,3 @@ class OzonParser:
             save_result['product_ids']  # Список ID сохраненных товаров
         )
 
-    # @staticmethod
-    # def is_docker_container():
-    #     try:
-    #         with open('/proc/1/cgroup', 'r') as f:
-    #             content = f.read()
-    #             # Ищем маркеры Docker, LXC, Kubernetes
-    #             if any(marker in content for marker in ['docker', 'lxc', 'kubepods']):
-    #                 return True
-    #     except (FileNotFoundError, PermissionError):
-    #         pass
-    #     return False
