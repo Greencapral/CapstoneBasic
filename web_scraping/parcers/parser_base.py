@@ -149,29 +149,64 @@ class Parser:
     def human_like_actions(self):
         try:
             window_size = self.driver.get_window_size()
-            max_x = window_size["width"] - 100
-            max_y = window_size["height"] - 100
+            viewport_width = window_size["width"]
+            viewport_height = window_size["height"]
 
-            if max_x < 100 or max_y < 100:
+            # Безопасные границы с запасом (35 % от размера окна)
+            safe_margin_x = int(viewport_width * 0.35)
+            safe_margin_y = int(viewport_height * 0.35)
+
+            max_x = viewport_width - safe_margin_x
+            min_x = safe_margin_x
+            max_y = viewport_height - safe_margin_y
+            min_y = safe_margin_y
+
+            if max_x < min_x or max_y < min_y:
                 print("Окно слишком маленькое для имитации действий")
                 return
 
             actions = ActionChains(self.driver)
 
-            body = self.driver.find_element(By.TAG_NAME, "body")
+            try:
+                body = self.driver.find_element(By.TAG_NAME, "body")
+            except Exception as e:
+                print(f"Не удалось найти элемент body: {e}")
+                return
 
-            for _ in range(random.randint(2, 5)):
-                x = random.randint(50, max_x)
-                y = random.randint(50, max_y)
+            # Функция для безопасного перемещения в абсолютные координаты
+            def safe_move_to(x, y):
+                # Принудительно ограничиваем координаты безопасными границами
+                safe_x = max(min_x, min(x, max_x))
+                safe_y = max(min_y, min(y, max_y))
 
                 try:
-                    actions.move_to_element_with_offset(body, x, y).perform()
-                    time.sleep(random.uniform(0.3, 1.2))
-                    actions.reset_actions()  # сброс действий
-                except Exception as e:
-                    print(f"Ошибка движения мыши в позиции ({x}, {y}): {e}")
-                    continue
+                    actions.move_to_element_with_offset(body, safe_x, safe_y).perform()
+                    time.sleep(random.uniform(0.3, 0.8))
+                    return safe_x, safe_y
+                except Exception:
+                    # Резервный вариант через JavaScript — скролл к координатам
+                    self.driver.execute_script(f"window.scrollTo({safe_x}, {safe_y});")
+                    time.sleep(random.uniform(0.5, 1.0))
+                    return safe_x, safe_y
 
+            # Начальная позиция
+            current_x, current_y = safe_move_to(
+                random.randint(min_x, max_x),
+                random.randint(min_y, max_y)
+            )
+
+            # Случайные движения мыши
+            for _ in range(random.randint(2, 5)):
+                offset_x = random.randint(-40, 40)  # Уменьшили диапазон для плавности
+                offset_y = random.randint(-40, 40)
+
+                new_x = current_x + offset_x
+                new_y = current_y + offset_y
+
+                # Всегда используем safe_move_to для гарантированной безопасности
+                current_x, current_y = safe_move_to(new_x, new_y)
+
+            # Прокрутка страницы с периодическим обновлением границ
             scroll_height = self.driver.execute_script("return document.body.scrollHeight;")
             current_scroll = 0
 
@@ -185,24 +220,37 @@ class Parser:
                 self.driver.execute_script(f"window.scrollTo(0, {current_scroll});")
                 time.sleep(random.uniform(0.8, 2.0))
 
-                if random.random() < 0.3:  # 30% шанс
-                    x = random.randint(50, max_x)
-                    y = random.randint(50, max_y)
-                    try:
-                        actions.move_to_element_with_offset(body, x, y).perform()
-                        time.sleep(random.uniform(0.2, 0.8))
-                        actions.reset_actions()
-                    except:
-                        pass
+                # После прокрутки обновляем границы видимой области
+                window_size = self.driver.get_window_size()
+                viewport_width = window_size["width"]
+                viewport_height = window_size["height"]
 
-            center_x = window_size["width"] // 2
-            center_y = window_size["height"] // 2
-            try:
-                actions.move_to_element_with_offset(body, center_x, center_y).perform()
-                actions.reset_actions()
-            except:
-                pass
+                safe_margin_x = int(viewport_width * 0.35)
+                safe_margin_y = int(viewport_height * 0.35)
+
+                max_x = viewport_width - safe_margin_x
+                min_x = safe_margin_x
+                max_y = viewport_height - safe_margin_y
+                min_y = safe_margin_y
+
+                # Случайное движение мыши во время прокрутки (30 % шанс)
+                if random.random() < 0.3:
+                    offset_x = random.randint(-20, 20)
+                    offset_y = random.randint(-20, 20)
+
+                    new_x = current_x + offset_x
+                    new_y = current_y + offset_y
+                    current_x, current_y = safe_move_to(new_x, new_y)
+
+            # Финальное перемещение в центр экрана
+            center_x = viewport_width // 2
+            center_y = viewport_height // 2
+
+            print(f"Попытка финального перемещения в центр: ({center_x}, {center_y})")
+
+            # Используем только safe_move_to для финального перемещения
+            current_x, current_y = safe_move_to(center_x, center_y)
+            print("Финальное перемещение выполнено")
 
         except Exception as e:
             print(f"Критическая ошибка имитации действий: {e}")
-
