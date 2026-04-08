@@ -33,3 +33,10 @@ class Searchers(BaseModel):
         related_name="searches",
         verbose_name="Маркетплейсы для поиска",
     )
+
+    class Meta:
+        verbose_name = "Запрос"
+        verbose_name_plural = "Запросы"
+
+    def __str__(self):
+        return f'{self.user} - {self.query}'
