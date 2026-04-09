@@ -3,42 +3,65 @@ from web_scraping.models import BaseModel
 
 
 class Product(BaseModel):
+    """
+    Модель товара.
+    Описывает товар, размещённый на маркетплейсе. Наследует общие поля
+    и методы от BaseModel (created_at, updated_at). Содержит информацию
+    о названии, цене, идентификаторах, ссылках и изображении товара,
+    а также связь с маркетплейсом, на котором он размещён.
+    """
 
+    class Meta:
+        """Метаданные модели для админ‑панели и интерфейса."""
+        verbose_name = "Товар"  # Человекочитаемое имя модели в единственном числе
+        verbose_name_plural = "Товары"  # Человекочитаемое имя модели во множественном числе
+
+    """Название товара. Максимальная длина — 100 символов."""
     name = models.CharField(max_length=100, verbose_name="Название товара")
 
+    """Связь с моделью Marketplace. Указывает, на каком маркетплейсе размещён товар.
+    При удалении маркетплейса все связанные товары также будут удалены (CASCADE)."""
     marketplace = models.ForeignKey(
         "Marketplace",
         on_delete=models.CASCADE,
         verbose_name="Маркетплейс",
     )
 
+    """Внутренний идентификатор товара на маркетплейсе. Максимальная длина — 255 символов."""
     product_id = models.CharField(
         max_length=255,
         verbose_name="ID товара на маркетплейсе",
     )
 
+    """Цена товара. Допускает до 10 цифр в целом (включая дробную часть), из них 2 знака после запятой."""
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Текущая цена",
     )
 
+    """URL изображения товара. Поле необязательно для заполнения (может быть пустым).
+    Автоматически валидирует корректность URL."""
     image_url = models.URLField(
         blank=True,
         null=True,
         verbose_name="URL изображения",
     )
 
+    """Прямая ссылка на страницу товара на маркетплейсе. Поле обязательно для заполнения.
+    Автоматически валидирует корректность URL."""
     url = models.URLField(verbose_name="Ссылка на товар")
 
-    class Meta:
-        verbose_name = "Товар"
-        verbose_name_plural = "Товары"
-
-    def __str__(self):
-        return self.name
 
     def __repr__(self):
+        """
+        Возвращает официальное строковое представление объекта.
+        Используется для отладки и вывода подробной информации об объекте в консоли.
+        Содержит ID, название и цену товара в структурированном формате.
+
+        Returns:
+            str: Строка вида '<Product id=X, name='Name', price=Y>'.
+        """
         return (
-            f"<Product id={self.id}, name='{self.name}', price={self.price}>"
+            f"<Product id={self.pk}, name='{self.name}', price={self.price}>"
         )
