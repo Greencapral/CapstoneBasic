@@ -100,7 +100,6 @@ def _parse_current_page(parser):
 
                     cleaned_name = full_text.replace("/", "").strip()
                     name = cleaned_name
-                    print(name)
                 except NoSuchElementException:
                     print(
                         "Не найдено название товара, пропускаем карточку"
@@ -122,7 +121,6 @@ def _parse_current_page(parser):
                     clean_price = clean_price.replace(",", ".")
 
                     price = Decimal(clean_price)
-                    print(f"Цена: {price}")
                 except (
                         ValueError,
                         InvalidOperation,
