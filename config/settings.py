@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "custom_user_app.apps.CustomUserAppConfig",
     "web_scraping.apps.WebScrapingConfig",
+    "django_celery_results",
 ]
 
 MIDDLEWARE = [
@@ -154,3 +155,6 @@ AUTH_USER_MODEL = "custom_user_app.CustomUser"
 
 SELENIUM_DRIVER = "chrome"  # или 'firefox', 'edge'
 SELENIUM_HEADLESS = True  # запуск браузера в фоновом режиме (без GUI)
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")

@@ -71,6 +71,31 @@ services:
       timeout: 2s   # Таймаут ожидания ответа — 1 секунда
       retries: 3    # Количество попыток перед признанием сервиса нерабочим
 
+  # Сервис Redis для Celery
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Сервис Celery Worker
+  celery-worker:
+    build:
+      context: ./
+      dockerfile: docker-build/app/Dockerfile
+    command: celery -A myproject worker -l INFO
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
   selenium:
     image: selenium/standalone-chrome:latest
     shm_size: 2gb
@@ -80,3 +105,4 @@ services:
 # Том pg-data создаётся Docker и сохраняется между перезапусками контейнеров
 volumes:
   pg-data:
+  redis-data:
