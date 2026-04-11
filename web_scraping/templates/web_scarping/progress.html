@@ -1,0 +1,133 @@
+{% extends 'web_scarping/base.html' %}
+
+{% block header %}
+    <h1>Статус парсинга запросов</h1>
+{% endblock %}
+
+{% block body %}
+    <div class="progress-container">
+        <div class="progress-bar" id="progress-bar">
+            <div class="progress-value" id="progress-value">0%</div>
+        </div>
+        <div class="progress-message" id="progress-message">
+            Инициализация...
+        </div>
+    </div>
+
+    <div class="marketplace-results">
+        <h3>Результаты по площадкам:</h3>
+        <div id="marketplace-details"></div>
+    </div>
+
+    <script>
+        const searchId = {{ search_id }};
+        let interval;
+
+        function updateProgress() {
+            fetch(`/get_progress/${searchId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const progressBar = document.getElementById('progress-bar');
+                    const progressValue = document.getElementById('progress-value');
+                    const progressMessage = document.getElementById('progress-message');
+                    const marketplaceDetails = document.getElementById('marketplace-details');
+
+                    progressBar.style.width = `${data.progress}%`;
+                    progressValue.innerText = `${data.progress}%`;
+                    progressMessage.innerText = data.status;
+
+                    marketplaceDetails.innerHTML = '';
+                    data.results.forEach(result => {
+                        const div = document.createElement('div');
+                        div.classList.add('marketplace-item');
+                        div.innerText = `${result.task_id}: ${result.status} (${result.progress}%)`;
+                        marketplaceDetails.appendChild(div);
+                    });
+
+                    if (data.complete) {
+                        clearInterval(interval);
+                        progressMessage.innerText = 'Парсинг завершен';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка получения прогресса:', error);
+                });
+        }
+
+        interval = setInterval(updateProgress, 1000);
+        updateProgress();  // Первый запрос сразу
+    </script>
+
+    <style>
+        .progress-container {
+            width: 80%;
+            margin: 20px auto;
+        }
+
+        .progress-bar {
+            height: 30px;
+            background-color: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar::before {
+            content: '';
+            display: block;
+            width: 0;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+
+        .progress-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .progress-message {
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .marketplace-results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+
+        .marketplace-item {
+            margin: 5px 0;
+        }
+    </style>
+{% endblock %}
+
+{% block footer %}
+    <div class="footer">
+        <a href="{% url 'query_list' %}">Вернуться к списку запросов</a>
+    </div>
+{% endblock %}
+
+<script>
+    const searchId = {{ search_id }};
+    let interval;
+
+    function updateProgress() {
+        fetch(`/get_progress/${searchId}`)
+            .then(response => response.json())
+            .then(data => {
+                // Обработка данных
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+            });
+    }
+
+    interval = setInterval(updateProgress, 1000);
+    updateProgress();
+</script>

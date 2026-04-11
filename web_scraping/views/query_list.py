@@ -1,117 +1,74 @@
-from django.shortcuts import redirect, render
+import time
+from celery.result import AsyncResult
+from django.http import JsonResponse
+from django.shortcuts import render, redirect
+from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
-from web_scraping.models import Searchers,Marketplace,Product
-from web_scraping.services import ozon_service, wildberries_service
-
+from web_scraping.models import Marketplace, Searchers
+from web_scraping.tasks import scrape_marketplace_task
 
 @login_required(login_url="login")
 def query_list(request):
-    """
-    Обрабатывает страницу списка поисковых запросов пользователя.
-    Позволяет создавать новые поисковые запросы для маркетплейсов (Ozon, Wildberries),
-    запускать парсинг товаров и отображает историю запросов пользователя.
-    Для неавторизованных пользователей перенаправляет на страницу входа.
-
-    Args:
-        request (HttpRequest): HTTP‑запрос от клиента, содержащий:
-            - метод запроса (GET/POST);
-            - данные формы (при POST);
-            - информацию о пользователе (request.user).
-
-    Returns:
-        HttpResponse: Отрендеренный HTML‑шаблон web_scarping/search_list.html
-            с контекстом, включающим маркетплейсы, историю запросов и данные пользователя.
-    """
     if request.method == 'POST':
-        # Получаем поисковый запрос из данных формы (поле 'query')
         query = request.POST.get('query')
-        # Получаем список выбранных маркетплейсов из формы (массив 'marketplaces[]')
         marketplace_domains = request.POST.getlist('marketplaces[]')
 
-        # Проверяем, что запрос не пустой
         if not query:
-            # Если запрос пустой, перенаправляем на ту же страницу
             return redirect('query_list')
 
         try:
-            # Создаём запись о новом поиске в БД, связывая с текущим пользователем
+            # Создаём запись о поиске
             search = Searchers.objects.create(
                 user=request.user,
                 query=query
             )
 
-            # Фильтруем маркетплейсы по выбранным доменам
+            # Получаем выбранные маркетплейсы
             marketplaces = Marketplace.objects.filter(
                 name__in=marketplace_domains
             )
-            # Извлекаем ID маркетплейсов для дальнейшей связи с поиском
             marketplace_ids = marketplaces.values_list('pk', flat=True)
 
-            # Проверяем, что найдены соответствующие маркетплейсы
             if not marketplace_ids:
-                # Если маркетплейсы не найдены, перенаправляем обратно
                 return redirect('query_list')
 
-            # Связываем поиск с выбранными маркетплейсами через M2M‑связь
             search.marketplaces.set(marketplace_ids)
-            # Инициализируем пустой список для сбора ID всех найденных товаров
-            all_product_ids = []
 
-            # Перебираем выбранные маркетплейсы для запуска парсинга
+            # Запускаем задачи парсинга параллельно
+            task_ids = []
             for marketplace in marketplaces:
-                if marketplace.name == 'ozon.ru':
-                    # Запускаем парсинг на Ozon с передачей запроса и headless‑режима
-                    result = ozon_service.scrape_ozon(
-                        search_query=query,
-                        headless=True
-                    )
-                    # Добавляем найденные ID товаров из Ozon в общий список
-                    all_product_ids.extend(result.get('product_ids', []))
-                    print(all_product_ids)  # Отладочный вывод собранных ID
-                elif marketplace.name == 'wildberries.ru':
-                    print('test1 --wb--')  # Отладочная метка для отслеживания выполнения ветки WB
-                    # Запускаем парсинг на Wildberries с передачей запроса и headless‑режима
-                    result = wildberries_service.scrape_wb(
-                        search_query=query,
-                        headless=True
-                    )
-                    # Добавляем найденные ID товаров из Wildberries в общий список
-                    all_product_ids.extend(result.get('product_ids', []))
-                    # Отладочные выводы: ID из текущего результата и общий список
-                    print(result.get('product_ids', []))
-                    print(all_product_ids)
-                else:
-                    # Пропускаем маркетплейсы, не поддерживаемые текущим сервисом
-                    continue
-
-            # Если найдены товары (есть ID), связываем их с записью о поиске
-            if all_product_ids:
-                search.products.set(
-                    Product.objects.filter(product_id__in=all_product_ids)
+                task = scrape_marketplace_task.delay(
+                    marketplace_name=marketplace.name,
+                    query=query,
+                    search_id=search.pk
                 )
+                task_ids.append(task.id)
+
+            # Сохраняем ID задач в сессии для отслеживания прогресса
+            request.session['current_tasks'] = task_ids
+            request.session['search_id'] = search.pk
+
+            # Перенаправляем на страницу с прогрессом
+            return redirect('query_progress', search_id=search.pk)
+
         except Exception as e:
-            # При любой ошибке в процессе парсинга перенаправляем на страницу запросов
+            print(f"Ошибка создания поиска: {e}")
             return redirect('query_list')
 
-    # Определяем набор запросов для отображения:
-    # - суперпользователь видит все запросы;
-    # - обычный пользователь — только свои.
+    # Остальная часть вьюшки для GET‑запроса
     if request.user.is_superuser:
-        searchers = Searchers.objects.all().order_by("-id")  # Все запросы, сортировка по убыванию ID
+        searchers = Searchers.objects.all().order_by("-id")
     else:
-        searchers = Searchers.objects.filter(user=request.user).order_by("-id")  # Только запросы текущего пользователя
+        searchers = Searchers.objects.filter(user=request.user).order_by("-id")
 
-    # Получаем все доступные маркетплейсы для отображения в форме
     marketplaces = Marketplace.objects.all()
 
-    # Формируем контекст для передачи в шаблон
     context = {
-        "marketplaces": marketplaces,  # Список маркетплейсов для выбора в форме
-        "searchers": searchers,  # История поисковых запросов (текущего пользователя или всех)
-        "current_user": request.user  # Данные текущего пользователя для отображения в интерфейсе
+        "marketplaces": marketplaces,
+        "searchers": searchers,
+        "current_user": request.user
     }
 
-    # Рендерим HTML‑страницу с заполненным контекстом
     return render(
         request,
         "web_scarping/search_list.html",
@@ -119,3 +76,77 @@ def query_list(request):
     )
 
 
+@login_required(login_url="login")
+def get_progress(request, search_id):
+    """API endpoint для получения прогресса парсинга."""
+    task_ids = request.session.get('current_tasks', [])
+    search_id_session = request.session.get('search_id')
+
+    if not task_ids or search_id != search_id_session:
+        return JsonResponse({
+            'complete': True,
+            'progress': 100,
+            'status': 'Нет активных задач',
+            'results': []
+        })
+
+    results = []
+    all_complete = True
+    total_progress = 0
+
+    for task_id in task_ids:
+        task_result = AsyncResult(task_id)
+
+        if task_result.state == 'PROGRESS':
+            meta = task_result.info
+            progress = meta.get('progress', 0)
+            status = meta.get('status', 'В процессе...')
+            all_complete = False
+        elif task_result.state == 'SUCCESS':
+            meta = task_result.info
+            progress = 100
+            status = meta.get('status', 'Успешно завершено')
+        elif task_result.state == 'FAILURE':
+            meta = task_result.info
+            progress = 0
+            status = f"Ошибка: {meta.get('status', 'Неизвестная ошибка')}"
+        else:
+            progress = 0
+            status = 'Ожидание...'
+            all_complete = False
+
+        results.append({
+            'task_id': task_id,
+            'state': task_result.state,
+            'progress': progress,
+            'status': status
+        })
+        total_progress += progress
+
+    avg_progress = total_progress // len(task_ids) if task_ids else 0
+
+    # Если прошло 20 секунд, принудительно завершаем ожидание
+    start_time = request.session.get('task_start_time', time.time())
+    elapsed = time.time() - start_time
+
+    if elapsed >= 20:
+        all_complete = True
+        status = "Таймаут 20 секунд достигнут. Показываем результаты."
+
+    return JsonResponse({
+        'complete': all_complete,
+        'progress': avg_progress,
+        'status': status,
+        'results': results
+    })
+
+def query_progress(request, search_id):
+    """Страница отображения прогресса парсинга."""
+    # Сохраняем время начала задач
+    request.session['task_start_time'] = time.time()
+
+    context = {
+        'search_id': search_id,
+        'current_user': request.user
+    }
+    return render(request, "web_scarping/progress.html", context)

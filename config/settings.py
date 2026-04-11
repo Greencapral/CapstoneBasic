@@ -36,6 +36,11 @@ ALLOWED_HOSTS = [
     '0.0.0.0',
 ]
 
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:8000",
+#     "http://127.0.0.1:8000",
+#     "http://0.0.0.0:8000",
+# ]
 
 # Путь к статическим файлам (обязательно для collectstatic)
 STATIC_URL = '/static/'
@@ -58,6 +63,7 @@ INSTALLED_APPS = [
     "custom_user_app.apps.CustomUserAppConfig",
     "web_scraping.apps.WebScrapingConfig",
     "django_celery_results",
+    # "django.contrib.corsheaders",
 ]
 
 MIDDLEWARE = [
@@ -68,6 +74,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # "django.contrib.corsheaders.middleware.CorsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -158,3 +165,4 @@ SELENIUM_HEADLESS = True  # запуск браузера в фоновом ре
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
+CELERY_WORKER_CONCURRENCY = 2  # Количество воркеров
