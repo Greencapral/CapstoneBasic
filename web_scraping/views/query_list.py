@@ -1,8 +1,4 @@
-import time
-from celery.result import AsyncResult
-from django.http import JsonResponse
 from django.shortcuts import render, redirect
-from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from web_scraping.models import Marketplace, Searchers
 from web_scraping.tasks import scrape_marketplace_task
@@ -48,7 +44,7 @@ def query_list(request):
             request.session['current_tasks'] = task_ids
             request.session['search_id'] = search.pk
 
-            # Перенаправляем на страницу с прогрессом
+            # Перенаправляем на страницу с прогрессом            
             return redirect('query_progress', search_id=search.pk)
 
         except Exception as e:
@@ -75,78 +71,3 @@ def query_list(request):
         context=context,
     )
 
-
-@login_required(login_url="login")
-def get_progress(request, search_id):
-    """API endpoint для получения прогресса парсинга."""
-    task_ids = request.session.get('current_tasks', [])
-    search_id_session = request.session.get('search_id')
-
-    if not task_ids or search_id != search_id_session:
-        return JsonResponse({
-            'complete': True,
-            'progress': 100,
-            'status': 'Нет активных задач',
-            'results': []
-        })
-
-    results = []
-    all_complete = True
-    total_progress = 0
-
-    for task_id in task_ids:
-        task_result = AsyncResult(task_id)
-
-        if task_result.state == 'PROGRESS':
-            meta = task_result.info
-            progress = meta.get('progress', 0)
-            status = meta.get('status', 'В процессе...')
-            all_complete = False
-        elif task_result.state == 'SUCCESS':
-            meta = task_result.info
-            progress = 100
-            status = meta.get('status', 'Успешно завершено')
-        elif task_result.state == 'FAILURE':
-            meta = task_result.info
-            progress = 0
-            status = f"Ошибка: {meta.get('status', 'Неизвестная ошибка')}"
-        else:
-            progress = 0
-            status = 'Ожидание...'
-            all_complete = False
-
-        results.append({
-            'task_id': task_id,
-            'state': task_result.state,
-            'progress': progress,
-            'status': status
-        })
-        total_progress += progress
-
-    avg_progress = total_progress // len(task_ids) if task_ids else 0
-
-    # Если прошло 20 секунд, принудительно завершаем ожидание
-    start_time = request.session.get('task_start_time', time.time())
-    elapsed = time.time() - start_time
-
-    if elapsed >= 20:
-        all_complete = True
-        status = "Таймаут 20 секунд достигнут. Показываем результаты."
-
-    return JsonResponse({
-        'complete': all_complete,
-        'progress': avg_progress,
-        'status': status,
-        'results': results
-    })
-
-def query_progress(request, search_id):
-    """Страница отображения прогресса парсинга."""
-    # Сохраняем время начала задач
-    request.session['task_start_time'] = time.time()
-
-    context = {
-        'search_id': search_id,
-        'current_user': request.user
-    }
-    return render(request, "web_scarping/progress.html", context)

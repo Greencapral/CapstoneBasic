@@ -36,11 +36,11 @@ ALLOWED_HOSTS = [
     '0.0.0.0',
 ]
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:8000",
-#     "http://127.0.0.1:8000",
-#     "http://0.0.0.0:8000",
-# ]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://0.0.0.0:8000",
+]
 
 # Путь к статическим файлам (обязательно для collectstatic)
 STATIC_URL = '/static/'
@@ -165,4 +165,4 @@ SELENIUM_HEADLESS = True  # запуск браузера в фоновом ре
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
-CELERY_WORKER_CONCURRENCY = 2  # Количество воркеров
+CELERY_WORKER_CONCURRENCY = 1  # Количество воркеров
