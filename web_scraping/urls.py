@@ -16,6 +16,7 @@ urlpatterns = [
     path("query_list/", query_list, name="query_list"),
     path("search_results/",search_results, name="search_results_list",),
     path("search_results/<int:search_id>/", query_result, name="query_result",),
-    path('get_progress/<int:search_id>/', get_progress, name='get_progress'),
-    path('progress/<int:search_id>/', query_progress, name='query_progress'),
+    path("get_progress/<int:search_id>/", get_progress, name="get_progress",),
+    path("progress/<int:search_id>/", query_progress, name="query_progress",),
 ]
+
