@@ -11,8 +11,6 @@ from decimal import Decimal, InvalidOperation
 import re
 from config import celery_app
 
-@celery_app.task(bind=True, autoretry_for=(TimeoutException, WebDriverException),
-          retry_kwargs={'max_retries': 3, 'countdown': 60})
 def search_products_ozon(parser, search_query):
     """
     Выполняет поиск и парсинг товаров на Ozon по заданному поисковому запросу.
