@@ -9,7 +9,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 # Создаёт экземпляр приложения Celery с именем 'config'.
 # Имя приложения используется для идентификации в кластере Celery и в логах.
-app = Celery('config')
+app = Celery('web_scraping')
 
 # Загружает конфигурацию Celery из настроек Django.
 # Параметры:
