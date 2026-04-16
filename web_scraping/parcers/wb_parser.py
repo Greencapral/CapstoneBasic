@@ -35,14 +35,16 @@ def search_products_wb(parser, search_query):
         # Формируем URL для поиска на Wildberries с подстановкой поискового запроса
         search_url = f"https://www.wildberries.ru/catalog/0/search.aspx?search={search_query}"
 
+
         print(f"Открываем URL: {search_url}")
         parser.driver.get(search_url)  # Открываем сформированный URL в браузере
 
         # Ожидаем загрузки элемента body (максимум 20 секунд) как признак базовой загрузки страницы
-        WebDriverWait(parser.driver, 20).until(
+        WebDriverWait(parser.driver, 15).until(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
         print("Страница загружена успешно")
+        parser.human_like_actions()  # Имитация естественных действий пользователя (задержки, движение мыши и т.д.)
         print(f"Парсинг страницы...")
 
         # Вызываем вспомогательную функцию для парсинга данных с текущей страницы

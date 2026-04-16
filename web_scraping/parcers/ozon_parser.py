@@ -1,4 +1,3 @@
-
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -9,7 +8,7 @@ from selenium.common.exceptions import (
 )
 from decimal import Decimal, InvalidOperation
 import re
-from config import celery_app
+
 
 def search_products_ozon(parser, search_query):
     """
@@ -38,12 +37,13 @@ def search_products_ozon(parser, search_query):
         search_url = f"https://www.ozon.ru/search/?text={search_query}"
         print(f"Открываем URL: {search_url}")
 
-        parser.human_like_actions()  # Имитация естественных действий пользователя (задержки, движение мыши и т. д.)
+
         parser.driver.get(search_url)  # Загрузка страницы поиска по сформированному URL
 
+        # parser.human_like_actions()  # Имитация естественных действий пользователя (задержки, движение мыши и т.д.)
         try:
-            # Ожидание видимости элементов с ценами (максимум 15 секунд)
-            WebDriverWait(parser.driver, 15).until(
+            # Ожидание видимости элементов с ценами (максимум 30 секунд)
+            WebDriverWait(parser.driver, 30).until(
                 EC.visibility_of_element_located(
                     (By.CSS_SELECTOR,
              "span.c35_3_15-a1.tsHeadline500Medium"
@@ -53,7 +53,7 @@ def search_products_ozon(parser, search_query):
             print("Все элементы с ценами загружены")
         except TimeoutException:
             print("Таймаут ожидания загрузки цен — продолжаем парсинг с доступными данными")
-
+        parser.human_like_actions()  # Имитация естественных действий пользователя (задержки, движение мыши и т.д.)
         print(f"Парсинг страницы...")
 
         page_products = _parse_current_page(parser)  # Вызов вспомогательной функции для парсинга товаров на текущей странице
@@ -122,6 +122,7 @@ def _parse_current_page(parser):
                     price_elem = card.find_element(
                         By.CSS_SELECTOR,
                         "span.c35_3_15-a1.tsHeadline500Medium",)  # Поиск элемента с ценой в текущей карточке
+
                     price_text = price_elem.text.strip()
                     if not price_text:
                         raise NoSuchElementException("Цена не найдена ни по одному селектору")

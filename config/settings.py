@@ -165,4 +165,3 @@ SELENIUM_HEADLESS = True  # запуск браузера в фоновом ре
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
-CELERY_WORKER_CONCURRENCY = 1  # Количество воркеров

@@ -1,3 +1,5 @@
+import os
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import (
@@ -23,7 +25,7 @@ class Parser:
     состояние драйвера и связь с записью маркетплейса в БД.
     """
 
-    def __init__(self, name_mp, headless=True):
+    def __init__(self, name_mp, headless):
         """
         Инициализирует экземпляр парсера с заданными параметрами.
         Создаёт базовые атрибуты для хранения состояния парсера (драйвер,
@@ -104,9 +106,23 @@ class Parser:
 
         # Настройки отображения
         options.add_argument("--window-size=1920,1080")  # Установка размера окна браузера (1920×1080 px)
-        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        options.add_argument(
-            f"--user-agent={user_agent}")  # Установка пользовательского User‑Agent для имитации реального браузера
+        USER_AGENTS = [
+            # Desktop
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+            # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Safari/537.36",
+
+            # New ones
+            # "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Safari/537.36 Edg/120.0.2210.144",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+            # "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36"
+        ]
+        user_agent = random.choice(USER_AGENTS)
+        options.add_argument(f"--user-agent={user_agent}")
+        # user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        # options.add_argument(
+        #     f"--user-agent={user_agent}")  # Установка пользовательского User‑Agent для имитации реального браузера
 
         try:
             # Установка сервиса ChromeDriver через ChromeDriverManager
@@ -121,13 +137,17 @@ class Parser:
                 )
             else:
                 # Локально используем стандартный Chrome WebDriver
+                # self.driver = webdriver.Remote(
+                #     command_executor='http://localhost:4444/wd/hub',
+                #     options=options
+                # )
                 self.driver = webdriver.Chrome(service=service, options=options)
 
             # Скрипт для скрытия признака автоматизации: переопределяем свойство navigator.webdriver
             self.driver.execute_script(
                 "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
             )
-
+            print(user_agent)
         except Exception as e:
             print(f"Ошибка инициализации драйвера: {e}")  # Вывод сообщения об ошибке
             raise  # Повторное поднятие исключения для обработки на более высоком уровне
@@ -165,6 +185,13 @@ class Parser:
 
         for product_data in products_data:
             try:
+                # ПРОВЕРКА: пропускаем товар, если цена <= 0
+                if product_data["price"] <= 0:
+                    print(
+                        f"Пропускаем товар '{product_data['name']}' (ID: {product_data['product_id']}) — цена <= 0"
+                    )
+                    continue  # Переходим к следующему товару
+
                 all_product_ids.append(product_data["product_id"])  # Добавляем ID товара в общий список для отчёта
 
                 try:
@@ -240,48 +267,33 @@ class Parser:
             except Exception:  # Перехватываем любые исключения при закрытии драйвера
                 pass  # Игнорируем ошибки — главное, чтобы не прерывать выполнение программы
 
-    def human_like_actions(self):
+    def human_like_actions(self, pages_to_scroll=3):
         """
-        Имитирует естественные действия пользователя в браузере для обхода антибот‑систем.
-        Выполняет следующие действия:
-        - случайное перемещение курсора в безопасной зоне экрана;
-        - плавное скроллирование страницы вниз;
-        - случайные микрокорректировки позиции курсора во время скролла;
-        - финальное перемещение курсора в центр экрана.
-
+        Имитирует человеческие действия в браузере: движения курсора и скроллинг страницы.
         Args:
-            self (object): Экземпляр класса парсера с атрибутом driver (WebDriver).
-
-        Raises:
-            Exception: При критических ошибках выводится сообщение, но исключение не поднимается —
-                метод завершается штатно.
+            pages_to_scroll (int): количество страниц для скроллинга (по умолчанию 3)
         """
         try:
-            # Получаем текущие размеры окна браузера
+            # Получаем размеры окна браузера
             window_size = self.driver.get_window_size()
             viewport_width = window_size["width"]
             viewport_height = window_size["height"]
 
-            # Определяем безопасные отступы (35% от размера окна) для избежания краёв экрана
+            # Рассчитываем безопасные отступы (35% от размера viewport)
             safe_margin_x = int(viewport_width * 0.35)
             safe_margin_y = int(viewport_height * 0.35)
 
-            # Рассчитываем границы безопасной зоны для перемещения курсора
+            # Определяем границы безопасной зоны для движений курсора
             max_x = viewport_width - safe_margin_x
             min_x = safe_margin_x
             max_y = viewport_height - safe_margin_y
             min_y = safe_margin_y
 
-            # # Проверяем, достаточно ли велико окно для имитации действий
-            # if max_x < min_x or max_y < min_y:
-            #     print("Окно слишком маленькое для имитации действий")
-            #     return
-
-            # Создаём объект для выполнения цепочек действий (движения мыши и т.д.)
+            # Инициализируем цепочку действий Selenium
             actions = ActionChains(self.driver)
 
             try:
-                # Находим элемент body страницы для привязки перемещений курсора
+                # Находим элемент body для относительных перемещений курсора
                 body = self.driver.find_element(By.TAG_NAME, "body")
             except Exception as e:
                 print(f"Не удалось найти элемент body: {e}")
@@ -289,69 +301,62 @@ class Parser:
 
             def safe_move_to(x, y):
                 """
-                Безопасное перемещение курсора с ограничением координат в пределах безопасной зоны.
-                Если стандартное перемещение не удаётся, использует JavaScript для скролла.
-
+                Безопасное перемещение курсора с ограничением в пределах viewport.
                 Args:
-                    x (int): Координата X для перемещения.
-                    y (int): Координата Y для перемещения.
+                    x (int): координата X для перемещения
+                    y (int): координата Y для перемещения
 
                 Returns:
-                    tuple: Фактические координаты, куда был перемещён курсор (safe_x, safe_y).
+                    tuple: фактические координаты перемещения (safe_x, safe_y)
                 """
-                # Ограничиваем координаты курсора в пределах безопасной зоны
+                # Ограничиваем координаты в пределах безопасной зоны
                 safe_x = max(min_x, min(x, max_x))
                 safe_y = max(min_y, min(y, max_y))
 
                 try:
-                    # Перемещаем курсор относительно элемента body с заданными смещениями
+                    # Перемещаем курсор с задержкой для имитации человеческого поведения
                     actions.move_to_element_with_offset(body, safe_x, safe_y).perform()
-                    # Пауза для имитации естественной задержки (0.3–0.8с)
                     time.sleep(random.uniform(0.3, 0.8))
                     return safe_x, safe_y
                 except Exception:
-                    # Если стандартное перемещение не удалось, используем JavaScript для скролла
+                    # Альтернативный метод через JavaScript при ошибке
                     self.driver.execute_script(f"window.scrollTo({safe_x}, {safe_y});")
-                    # Увеличенная пауза при использовании JavaScript (0.5–1.0с)
                     time.sleep(random.uniform(0.5, 1.0))
                     return safe_x, safe_y
 
-            # Первое случайное перемещение курсора в безопасную зону
+            # Начальное случайное перемещение курсора в безопасную зону
             current_x, current_y = safe_move_to(
                 random.randint(min_x, max_x),
                 random.randint(min_y, max_y)
             )
 
-            # Выполняем 2–7 случайных микроперемещений курсора вокруг текущей позиции
-            for _ in range(random.randint(2, 7)):
+            # Серия случайных микроперемещений (±40px) для имитации «дрожания» курсора
+            for _ in range(random.randint(2, 5)):
                 offset_x = random.randint(-40, 40)  # Случайное смещение по X (±40px)
                 offset_y = random.randint(-40, 40)  # Случайное смещение по Y (±40px)
 
                 new_x = current_x + offset_x
                 new_y = current_y + offset_y
 
-                # Перемещаем курсор с учётом безопасных границ
                 current_x, current_y = safe_move_to(new_x, new_y)
 
-            # Получаем полную высоту страницы для расчёта скролла
-            scroll_height = self.driver.execute_script("return document.body.scrollHeight;")
+            # Расчёт целевой позиции скролла (в пикселях)
+            target_scroll = viewport_height * pages_to_scroll  # Целевая позиция скролла
             current_scroll = 0  # Текущая позиция скролла
 
-            # Плавно скроллируем страницу вниз небольшими шагами
-            while current_scroll < scroll_height:
+            # Постепенный скроллинг с случайными шагами и паузами
+            while current_scroll < target_scroll:
                 scroll_step = random.randint(100, 300)  # Размер шага скролла (100–300px)
                 current_scroll += scroll_step
 
-                # Корректируем позицию, если шаг превышает высоту страницы
-                if current_scroll > scroll_height:
-                    current_scroll = scroll_height
+                # Корректировка последнего шага, чтобы не превысить целевую позицию
+                if current_scroll > target_scroll:
+                    current_scroll = target_scroll
 
-                # Выполняем скролл до новой позиции
                 self.driver.execute_script(f"window.scrollTo(0, {current_scroll});")
-                # Пауза между шагами скролла (0.8–2.0с) для естественности
-                time.sleep(random.uniform(0.8, 2.0))
+                time.sleep(random.uniform(0.8, 1.0))  # Пауза между шагами скролла
 
-                # Пересчитываем размеры окна и границы безопасной зоны после скролла
+                # Перерасчёт размеров viewport и границ безопасной зоны (на случай изменения окна)
                 window_size = self.driver.get_window_size()
                 viewport_width = window_size["width"]
                 viewport_height = window_size["height"]
@@ -373,16 +378,14 @@ class Parser:
                     new_y = current_y + offset_y
                     current_x, current_y = safe_move_to(new_x, new_y)
 
-            # Рассчитываем координаты центра экрана
+            # Финальное перемещение курсора в центр экрана
             center_x = viewport_width // 2
             center_y = viewport_height // 2
 
             print(f"Попытка финального перемещения в центр: ({center_x}, {center_y})")
 
-            # Перемещаем курсор в центр экрана в конце имитации
             current_x, current_y = safe_move_to(center_x, center_y)
             print("Финальное перемещение выполнено")
 
         except Exception as e:
-            print(
-                f"Критическая ошибка имитации действий: {e}")  # Вывод сообщения об ошибке без прерывания выполнения программы
+            print(f"Критическая ошибка имитации действий: {e}")
