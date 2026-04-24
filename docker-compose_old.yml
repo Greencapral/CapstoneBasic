@@ -1,5 +1,5 @@
 # Конфигурация Docker Compose для запуска приложения и базы данных
-# Описывает сервисы: myapp (веб‑приложение), pg (PostgreSQL), Redis, Celery Worker и Selenium
+# Описывает два сервиса: myapp (веб‑приложение) и pg (PostgreSQL)
 
 services:
   # Сервис веб‑приложения
@@ -13,18 +13,12 @@ services:
 
     # Переменные окружения для приложения
     environment:
+
       POSTGRES_DB: "${POSTGRES_DB}"
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       DB_HOST: "${POSTGRES_HOST}"
-      SECRET_KEY: "${SECRET_KEY}"
-      REDIS_HOST: "redis"
-      REDIS_PORT: "6379"
-      CELERY_BROKER_URL: "redis://redis:6379/0"
-      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
-      SELENIUM_HOST: "selenium"
-      SELENIUM_PORT: "4444"
-      SERVICE_TYPE: "web"  # Тип сервиса для entrypoint.sh
+      SECRET_KEY: ${SECRET_KEY}
 
     # Команда запуска приложения внутри контейнера
     command: ["/bin/sh", "/etc/entrypoint.sh"]
@@ -33,12 +27,11 @@ services:
     ports:
       - "8000:8000"
 
+
     # Условие запуска: сервис myapp стартует только после того, как pg станет «здоровым»
     depends_on:
       pg:
         condition: service_healthy  # Ждём, пока pg пройдёт healthcheck
-      redis:
-        condition: service_healthy
       selenium:
         condition: service_started
 
@@ -47,7 +40,7 @@ services:
 
   # Сервис базы данных PostgreSQL
   pg:
-    # Используем готовый образ PostgreSQL 14 на базе Alpine Linux
+    # Используем готовый образ PostgreSQL 18.1 на базе Alpine Linux
     image: postgres:14-trixie
 
     # Переменные окружения для настройки PostgreSQL
@@ -59,16 +52,16 @@ services:
       # Пароль пользователя — берётся из переменной окружения хоста (${PG_PASSWORD})
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # Директория для хранения данных PostgreSQL внутри контейнера
-      PGDATA: /var/lib/postgresql/data
+      PGDATA: /var/lib/postgresql/18/docker
 
-    # Проброс портов: внешний порт 5432 → внутренний порт 5432
+    # Проброс портов (закомментирован): внешний порт 5432 → внутренний порт 5432
     # Позволяет подключаться к БД извне (например, через psql или GUI‑клиент)
-    ports:
-      - "5432:5432"
+      ports:
+       -"5432:5432"
 
     # Монтирование тома для сохранения данных БД между перезапусками контейнеров
     volumes:
-      - pg-data:/var/lib/postgresql/data  # Данные хранятся в томе pg-data
+      - pg-data:/var/lib/postgresql  # Данные хранятся в томе pg-data
 
     # Проверка работоспособности сервиса (healthcheck)
     healthcheck:
@@ -87,7 +80,7 @@ services:
       - redis-data:/data
     command: redis-server --appendonly yes
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -97,32 +90,19 @@ services:
     build:
       context: ./
       dockerfile: docker-build/app/Dockerfile
-    command: celery -A config worker -l INFO
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      SERVICE_TYPE: "celery-worker"  # Тип сервиса для entrypoint.sh
+    command: celery -A myproject worker -l INFO
+
     depends_on:
       redis:
         condition: service_healthy
-    volumes:
-      - ./fixtures:/app/fixtures  # Синхронизируем fixtures для Celery, если нужно
 
-
-  # Сервис Selenium для автоматизации браузера
   selenium:
     image: selenium/standalone-chrome:latest
     shm_size: 2gb
     ports:
       - "4444:4444"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-# Определение тома для хранения данных PostgreSQL и Redis
-# Тома создаются Docker и сохраняются между перезапусками контейнеров
+# Определение тома для хранения данных PostgreSQL
+# Том pg-data создаётся Docker и сохраняется между перезапусками контейнеров
 volumes:
   pg-data:
   redis-data:

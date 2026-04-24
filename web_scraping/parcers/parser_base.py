@@ -85,6 +85,7 @@ class Parser:
         # Базовые аргументы для стабильной работы драйвера
         options.add_argument("--no-sandbox")  # Отключение песочницы для повышения стабильности в контейнерах
         options.add_argument("--disable-dev-shm-usage")  # Обход ограничений по памяти в Docker
+        options.binary_location = "/usr/bin/chromium"  # Указываем путь к Chromium
         # options.add_argument("--disable-gpu")
         if self.headless:
             print('!!!', self.headless)
