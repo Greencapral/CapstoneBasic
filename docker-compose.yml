@@ -59,7 +59,7 @@ services:
       # Пароль пользователя — берётся из переменной окружения хоста (${PG_PASSWORD})
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # Директория для хранения данных PostgreSQL внутри контейнера
-      PGDATA: /var/lib/postgresql/data
+      PGDATA: /var/lib/postgresql/18/docker
 
     # Проброс портов: внешний порт 5432 → внутренний порт 5432
     # Позволяет подключаться к БД извне (например, через psql или GUI‑клиент)
