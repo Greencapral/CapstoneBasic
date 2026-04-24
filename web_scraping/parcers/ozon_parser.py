@@ -1,3 +1,6 @@
+import random
+import time
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -37,23 +40,38 @@ def search_products_ozon(parser, search_query):
         search_url = f"https://www.ozon.ru/search/?text={search_query}"
         print(f"Открываем URL: {search_url}")
 
+        parser.driver.get("https://google.com")  # Первая вкладка
 
+        # Открываем новую пустую вкладку через JS
+        parser.driver.execute_script("window.open('');")
+
+        # Получаем все дескрипторы окон
+        window_handles = parser.driver.window_handles
+
+        # Переключаемся на последнюю открытую вкладку (новую)
+        parser.driver.switch_to.window(window_handles[-1])
+
+        # Переходим на нужный URL во второй вкладке
+
+        parser.driver.get("https://www.ozon.ru")
+        time.sleep(random.uniform(2, 4))
         parser.driver.get(search_url)  # Загрузка страницы поиска по сформированному URL
 
+        parser.scroll_down_for_5_seconds()
         # parser.human_like_actions()  # Имитация естественных действий пользователя (задержки, движение мыши и т.д.)
         try:
             # Ожидание видимости элементов с ценами (максимум 30 секунд)
             WebDriverWait(parser.driver, 30).until(
                 EC.visibility_of_element_located(
                     (By.CSS_SELECTOR,
-             "span.c35_3_15-a1.tsHeadline500Medium"
+             "span.c35_3_16-a1.tsHeadline500Medium"
              )
                 )
             )
             print("Все элементы с ценами загружены")
         except TimeoutException:
             print("Таймаут ожидания загрузки цен — продолжаем парсинг с доступными данными")
-        parser.human_like_actions()  # Имитация естественных действий пользователя (задержки, движение мыши и т.д.)
+        # parser.human_like_actions()  # Имитация естественных действий пользователя (задержки, движение мыши и т.д.)
         print(f"Парсинг страницы...")
 
         page_products = _parse_current_page(parser)  # Вызов вспомогательной функции для парсинга товаров на текущей странице
@@ -121,7 +139,7 @@ def _parse_current_page(parser):
                 try:
                     price_elem = card.find_element(
                         By.CSS_SELECTOR,
-                        "span.c35_3_15-a1.tsHeadline500Medium",)  # Поиск элемента с ценой в текущей карточке
+                        "span.c35_3_16-a1.tsHeadline500Medium",)  # Поиск элемента с ценой в текущей карточке
 
                     price_text = price_elem.text.strip()
                     if not price_text:
@@ -162,7 +180,7 @@ def _parse_current_page(parser):
                 try:
                     image_elem = card.find_element(
                         By.CSS_SELECTOR,
-                        "img.b95_3_4-a",)  # Поиск элемента изображения в текущей карточке
+                        ".tile-root img",)  # Поиск элемента изображения в текущей карточке
                     image_url = image_elem.get_attribute("src")  # Извлечение URL изображения из атрибута src
                 except NoSuchElementException:
                     image_url = None  # Если изображение не найдено, устанавливаем None

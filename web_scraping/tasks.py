@@ -47,7 +47,7 @@ def scrape_marketplace_task(self, marketplace_name, query, search_id):
                 meta={'progress': 20, 'status': 'Парсим Ozon...'}
             )
             # Вызываем сервис парсинга Ozon в headless‑режиме
-            result = ozon_service.scrape_ozon(search_query=query, headless=True)
+            result = ozon_service.scrape_ozon(search_query=query, headless=False)
         elif marketplace_name == 'wildberries.ru':
             # Уведомляем, что начался парсинг Wildberries (20% прогресса)
             self.update_state(
@@ -55,7 +55,7 @@ def scrape_marketplace_task(self, marketplace_name, query, search_id):
                 meta={'progress': 20, 'status': 'Парсим Wildberries...'}
             )
             # Вызываем сервис парсинга Wildberries в headless‑режиме
-            result = wildberries_service.scrape_wb(search_query=query, headless=True)
+            result = wildberries_service.scrape_wb(search_query=query, headless=False)
 
         # Уведомляем, что идёт обработка полученных данных (80% прогресса)
         self.update_state(

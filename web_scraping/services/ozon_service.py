@@ -1,3 +1,6 @@
+import random
+import time
+
 from web_scraping.parcers import Parser, search_products_ozon
 
 
@@ -24,6 +27,8 @@ def scrape_ozon(search_query, headless=False):
 
     # Инициализируем WebDriver браузера (настраиваем опции и запускаем браузер)
     parser.setup_driver()
+    # parser.warm_up_browser()
+
 
     # Выполняем поиск товаров на Ozon по переданному поисковому запросу
     products_data = search_products_ozon(parser, search_query)
@@ -39,3 +44,4 @@ def scrape_ozon(search_query, headless=False):
         "search_query": search_query,  # Исходный поисковый запрос — для отчётности и анализа
         "product_ids": save_result['product_ids']  # Список ID всех обработанных товаров
     }
+

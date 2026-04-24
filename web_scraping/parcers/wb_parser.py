@@ -1,3 +1,6 @@
+import random
+import time
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import (
@@ -11,6 +14,9 @@ from selenium.common.exceptions import (
     TimeoutException,
     WebDriverException,
 )
+
+from web_scraping.parcers import Parser
+
 
 def search_products_wb(parser, search_query):
     """
@@ -37,6 +43,23 @@ def search_products_wb(parser, search_query):
 
 
         print(f"Открываем URL: {search_url}")
+
+        parser.driver.get("https://google.com")  # Первая вкладка
+
+        # Открываем новую пустую вкладку через JS
+        parser.driver.execute_script("window.open('');")
+
+        # Получаем все дескрипторы окон
+        window_handles = parser.driver.window_handles
+
+        # Переключаемся на последнюю открытую вкладку (новую)
+        parser.driver.switch_to.window(window_handles[-1])
+
+        # Переходим на нужный URL во второй вкладке
+
+        parser.driver.get("https://www.wildberries.ru")
+        time.sleep(random.uniform(2, 4))
+
         parser.driver.get(search_url)  # Открываем сформированный URL в браузере
 
         # Ожидаем загрузки элемента body (максимум 20 секунд) как признак базовой загрузки страницы
@@ -44,7 +67,8 @@ def search_products_wb(parser, search_query):
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
         print("Страница загружена успешно")
-        parser.human_like_actions()  # Имитация естественных действий пользователя (задержки, движение мыши и т.д.)
+        parser.scroll_down_for_5_seconds()
+        # parser.human_like_actions()  # Имитация естественных действий пользователя (задержки, движение мыши и т.д.)
         print(f"Парсинг страницы...")
 
         # Вызываем вспомогательную функцию для парсинга данных с текущей страницы

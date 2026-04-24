@@ -1,10 +1,8 @@
-import os
+import re
+import subprocess
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import (
-    ActionChains,
-)
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
@@ -81,48 +79,73 @@ class Parser:
                 исключение перехватывается, выводится сообщение и повторно поднимается.
         """
         options = Options()
-        if self.headless:
-            options.add_argument("--headless")  # Запуск браузера без графического интерфейса (headless‑режим)
+        # if self.headless:
+        #     options.add_argument("--headless")  # Запуск браузера без графического интерфейса (headless‑режим)
 
         # Базовые аргументы для стабильной работы драйвера
         options.add_argument("--no-sandbox")  # Отключение песочницы для повышения стабильности в контейнерах
         options.add_argument("--disable-dev-shm-usage")  # Обход ограничений по памяти в Docker
+        # options.add_argument("--disable-gpu")
+        if self.headless:
+            print('!!!', self.headless)
+            options.add_argument("--headless=new")  # Обновлённый headless-режим
         options.add_argument(
             "--disable-blink-features=AutomationControlled")  # Отключение признаков автоматизации в Blink
         options.add_experimental_option(
             "excludeSwitches", ["enable-automation"]  # Исключение переключателя автоматизации
         )
-        options.add_experimental_option("useAutomationExtension", False)  # Отключение расширения автоматизации
+        # options.add_experimental_option("useAutomationExtension", False)  # Отключение расширения автоматизации
+        # options.add_argument("--disable-blink-features=AutomationControlled")
 
         # Дополнительные аргументы для минимизации детектирования автоматизации
-        options.add_argument("--disable-extensions")  # Отключение всех расширений браузера
-        options.add_argument("--disable-plugins")  # Отключение плагинов
-        options.add_argument("--disable-popup-blocking")  # Отключение блокировки всплывающих окон
-        options.add_argument("--profile-directory=Default")  # Использование стандартного профиля браузера
-        options.add_argument(
-            "--disable-background-timer-throttling")  # Отключение ограничения таймеров в фоновых вкладках
-        options.add_argument("--disable-backgrounding-occluded-windows")  # Отключение приостановки фоновых окон
-        options.add_argument("--disable-renderer-backgrounding")  # Отключение фоновой приостановки рендерера
+        # options.add_argument("--disable-extensions")  # Отключение всех расширений браузера
+        # options.add_argument("--disable-plugins")  # Отключение плагинов
+        # options.add_argument("--disable-popup-blocking")  # Отключение блокировки всплывающих окон
+        # options.add_argument("--profile-directory=Default")  # Использование стандартного профиля браузера
+        # options.add_argument(
+        #     "--disable-background-timer-throttling")  # Отключение ограничения таймеров в фоновых вкладках
+        # options.add_argument("--disable-backgrounding-occluded-windows")  # Отключение приостановки фоновых окон
+        # options.add_argument("--disable-renderer-backgrounding")  # Отключение фоновой приостановки рендерера
+        options.add_argument("--disable-features=TranslateUI")
+        options.add_argument("--disable-component-extensions-with-background-pages")
+        # Сетевые настройки
+        options.add_argument("--ignore-certificate-errors")
+        options.add_argument("--ignore-ssl-errors")
+        options.add_argument("--lang=ru-RU")
 
         # Настройки отображения
         options.add_argument("--window-size=1920,1080")  # Установка размера окна браузера (1920×1080 px)
-        USER_AGENTS = [
-            # Desktop
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Safari/537.36",
-            # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-            # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Safari/537.36",
-
-            # New ones
+        # USER_AGENTS = [
+            # Windows
+            # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Safari/537.36",
             # "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Safari/537.36 Edg/120.0.2210.144",
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
-            # "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36"
-        ]
-        user_agent = random.choice(USER_AGENTS)
+            # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Safari/537.36 Edg/120.0.2210.144",
+            #
+            # # macOS
+            # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+            #
+            # # Linux
+            # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.112 Safari/537.36",
+            # # обновлена версия Chrome
+            #
+            # # Мобильные устройства
+            # "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+            # "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36",
+            #
+            # # Новые добавления
+            # "Mozilla/5.0 (iPad; CPU OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+            # # iPad + Safari
+            # "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko",
+            # # Windows + IE 11 (для старых сайтов)
+            # "Mozilla/5.0 (Android 13; Tablet; SM-X716B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.83 Safari/537.36",
+            # # Android-планшет
+            # "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:115.0) Gecko/20100101 Firefox/115.0"
+            # Linux + Firefox (альтернатива Chrome)
+        # ]
+        # user_agent = random.choice(USER_AGENTS)
+        user_agent = get_random_user_agent()
+
         options.add_argument(f"--user-agent={user_agent}")
-        # user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        # options.add_argument(
-        #     f"--user-agent={user_agent}")  # Установка пользовательского User‑Agent для имитации реального браузера
 
         try:
             # Установка сервиса ChromeDriver через ChromeDriverManager
@@ -146,6 +169,37 @@ class Parser:
             # Скрипт для скрытия признака автоматизации: переопределяем свойство navigator.webdriver
             self.driver.execute_script(
                 "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            )
+
+            # Полное удаление признаков автоматизации через CDP
+            self.driver.execute_cdp_cmd(
+                "Page.addScriptToEvaluateOnNewDocument",
+                {
+                    "source": """
+                        // Удаляем флаг webdriver
+                        Object.defineProperty(navigator, 'webdriver', {
+                            get: () => undefined
+                        });
+
+                        // Имитируем реальные языки
+                        Object.defineProperty(navigator, 'languages', {
+                            get: () => ['ru-RU', 'ru', 'en-US', 'en']
+                        });
+
+                        // Имитируем плагины
+                        Object.defineProperty(navigator, 'plugins', {
+                            get: () => [1, 2, 3, 4, 5]
+                        });
+
+                        // Подделываем permissions
+                        const originalQuery = window.navigator.permissions.query;
+                        window.navigator.permissions.query = (parameters) => (
+                            parameters.name === 'notifications' ?
+                                Promise.resolve({ state: Notification.permission }) :
+                                originalQuery(parameters)
+                        );
+                    """
+                }
             )
             print(user_agent)
         except Exception as e:
@@ -267,125 +321,153 @@ class Parser:
             except Exception:  # Перехватываем любые исключения при закрытии драйвера
                 pass  # Игнорируем ошибки — главное, чтобы не прерывать выполнение программы
 
-    def human_like_actions(self, pages_to_scroll=2):
+
+    def scroll_down_for_5_seconds(self):
         """
-        Имитирует человеческие действия в браузере: движения курсора и скроллинг страницы.
-        Args:
-            pages_to_scroll (int): количество страниц для скроллинга (по умолчанию 3)
+        Скроллит страницу вниз в течение 5 секунд плавными шагами.
         """
         try:
-            # Получаем размеры окна браузера
+            # Получаем высоту viewport
             window_size = self.driver.get_window_size()
-            viewport_width = window_size["width"]
             viewport_height = window_size["height"]
 
-            # Рассчитываем безопасные отступы (35% от размера viewport)
-            safe_margin_x = int(viewport_width * 0.35)
-            safe_margin_y = int(viewport_height * 0.35)
+            # Расчёт целевой позиции скролла: 2–3 высоты экрана за 5 секунд
+            target_scroll = viewport_height * random.randint(2, 3)
+            current_scroll = 0
 
-            # Определяем границы безопасной зоны для движений курсора
-            max_x = viewport_width - safe_margin_x
-            min_x = safe_margin_x
-            max_y = viewport_height - safe_margin_y
-            min_y = safe_margin_y
+            # Время начала скроллинга
+            start_time = time.time()
 
-            # Инициализируем цепочку действий Selenium
-            actions = ActionChains(self.driver)
-
-            try:
-                # Находим элемент body для относительных перемещений курсора
-                body = self.driver.find_element(By.TAG_NAME, "body")
-            except Exception as e:
-                print(f"Не удалось найти элемент body: {e}")
-                return
-
-            def safe_move_to(x, y):
-                """
-                Безопасное перемещение курсора с ограничением в пределах viewport.
-                Args:
-                    x (int): координата X для перемещения
-                    y (int): координата Y для перемещения
-
-                Returns:
-                    tuple: фактические координаты перемещения (safe_x, safe_y)
-                """
-                # Ограничиваем координаты в пределах безопасной зоны
-                safe_x = max(min_x, min(x, max_x))
-                safe_y = max(min_y, min(y, max_y))
-
-                try:
-                    # Перемещаем курсор с задержкой для имитации человеческого поведения
-                    actions.move_to_element_with_offset(body, safe_x, safe_y).perform()
-                    time.sleep(random.uniform(0.3, 0.8))
-                    return safe_x, safe_y
-                except Exception:
-                    # Альтернативный метод через JavaScript при ошибке
-                    self.driver.execute_script(f"window.scrollTo({safe_x}, {safe_y});")
-                    time.sleep(random.uniform(0.5, 1.0))
-                    return safe_x, safe_y
-
-            # Начальное случайное перемещение курсора в безопасную зону
-            current_x, current_y = safe_move_to(
-                random.randint(min_x, max_x),
-                random.randint(min_y, max_y)
-            )
-
-            # Серия случайных микроперемещений (±40px) для имитации «дрожания» курсора
-            for _ in range(random.randint(2, 5)):
-                offset_x = random.randint(-40, 40)  # Случайное смещение по X (±40px)
-                offset_y = random.randint(-40, 40)  # Случайное смещение по Y (±40px)
-
-                new_x = current_x + offset_x
-                new_y = current_y + offset_y
-
-                current_x, current_y = safe_move_to(new_x, new_y)
-
-            # Расчёт целевой позиции скролла (в пикселях)
-            target_scroll = viewport_height * pages_to_scroll  # Целевая позиция скролла
-            current_scroll = 0  # Текущая позиция скролла
-
-            # Постепенный скроллинг с случайными шагами и паузами
-            while current_scroll < target_scroll:
-                scroll_step = random.randint(100, 300)  # Размер шага скролла (100–300px)
+            while time.time() - start_time < 5:  # Продолжаем, пока не прошло 5 секунд
+                # Размер шага скролла (100–300 px)
+                scroll_step = random.randint(100, 300)
                 current_scroll += scroll_step
 
                 # Корректировка последнего шага, чтобы не превысить целевую позицию
                 if current_scroll > target_scroll:
                     current_scroll = target_scroll
 
+                # Выполняем скролл через JavaScript
                 self.driver.execute_script(f"window.scrollTo(0, {current_scroll});")
-                time.sleep(random.uniform(0.8, 1.0))  # Пауза между шагами скролла
 
-                # Перерасчёт размеров viewport и границ безопасной зоны (на случай изменения окна)
+                # Пауза между шагами скролла (0.3–0.8 с) для плавного скролла
+                time.sleep(random.uniform(0.3, 0.8))
+
+                # Перерасчёт высоты viewport на случай изменения размера окна
                 window_size = self.driver.get_window_size()
-                viewport_width = window_size["width"]
                 viewport_height = window_size["height"]
+                target_scroll = viewport_height * random.randint(2, 3)
 
-                safe_margin_x = int(viewport_width * 0.35)
-                safe_margin_y = int(viewport_height * 0.35)
-
-                max_x = viewport_width - safe_margin_x
-                min_x = safe_margin_x
-                max_y = viewport_height - safe_margin_y
-                min_y = safe_margin_y
-
-                # С вероятностью 30% выполняем случайное микроперемещение курсора во время скролла
-                if random.random() < 0.3:
-                    offset_x = random.randint(-20, 20)  # Маленькое случайное смещение по X
-                    offset_y = random.randint(-20, 20)  # Маленькое случайное смещение по Y
-
-                    new_x = current_x + offset_x
-                    new_y = current_y + offset_y
-                    current_x, current_y = safe_move_to(new_x, new_y)
-
-            # Финальное перемещение курсора в центр экрана
-            center_x = viewport_width // 2
-            center_y = viewport_height // 2
-
-            print(f"Попытка финального перемещения в центр: ({center_x}, {center_y})")
-
-            current_x, current_y = safe_move_to(center_x, center_y)
-            print("Финальное перемещение выполнено")
+            # Финальный скролл до конца страницы (на всякий случай)
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
         except Exception as e:
-            print(f"Критическая ошибка имитации действий: {e}")
+            print(f"Ошибка при скроллинге: {e}")
+
+    def warm_up_browser(self):
+        """«Разминка» браузера перед парсингом Ozon"""
+        # Переходим на Google для имитации «поиска»
+        self.driver.get("https://www.google.com")
+        time.sleep(random.uniform(2, 4))
+
+        # Имитируем ввод запроса в поиске
+        try:
+            search_box = self.driver.find_element(By.NAME, "q")
+            for char in "Ozon":
+                search_box.send_keys(char)
+                time.sleep(random.uniform(0.1, 0.3))
+            time.sleep(1)
+        except:
+            pass
+
+
+def get_chrome_version():
+    try:
+        # Windows
+        cmd = 'reg query "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon" /v version'
+        result = subprocess.run(cmd, capture_output=True, shell=True, text=True)
+        if result.returncode == 0:
+            version = re.search(r'version\s+REG_SZ\s+(\d+\.\d+\.\d+\.\d+)', result.stdout)
+            if version:
+                return version.group(1).split('.')[0]
+
+        # Linux/macOS
+        for cmd in ['google-chrome --version', 'chrome --version', 'chromium-browser --version']:
+            result = subprocess.run(cmd, capture_output=True, shell=True, text=True)
+            if result.returncode == 0:
+                version = re.search(r'Chrome\s+(\d+)|Chromium\s+(\d+)', result.stdout)
+                if version:
+                    return version.group(1) or version.group(2)
+    except Exception as e:
+        print(f"Ошибка определения версии Chrome: {e}")
+    return None
+
+
+def generate_firefox_version():
+    """
+    Firefox: версии выходят примерно раз в 4 недели.
+    Актуальные версии — в диапазоне 115–130 (2023–2024 гг.).
+    """
+    return random.randint(115, 130)
+
+def generate_ios_version():
+    """
+    iOS: мажорные версии выходят раз в год.
+    Актуальные версии: 16, 17, 18 (бета).
+    """
+    versions = [16, 17]
+    # 20 % шанс получить бета‑версию 18
+    if random.random() < 0.2:
+        versions.append(18)
+    return random.choice(versions)
+
+def generate_android_version():
+    """
+    Android: мажорные версии выходят раз в год.
+    Актуальные версии: 12, 13, 14.
+    Приоритет: 14 (50 %), 13 (30 %), 12 (20 %).
+    """
+    choices = [14, 13, 12]
+    weights = [0.5, 0.3, 0.2]
+    return random.choices(choices, weights=weights)[0]
+
+def generate_ie_version():
+    """
+    Internet Explorer: последняя версия — 11.
+    IE больше не обновляется, но используется для совместимости.
+    Всегда возвращаем 11, с небольшим шансом (5 %) — 9 или 10.
+    """
+    # 90 % — IE 11, 5 % — IE 10, 5 % — IE 9
+    choices = [11, 10, 9]
+    weights = [0.9, 0.05, 0.05]
+    return random.choices(choices, weights=weights)[0]
+
+
+def get_random_user_agent():
+    chrome_version = get_chrome_version()
+    firefox_version = generate_firefox_version()
+    ios_version = generate_ios_version()
+    android_version = generate_android_version()
+    ie_version = generate_ie_version()
+    android_tablet_version = generate_android_version()
+    user_agents = [
+        # Актуальные версии на 2024 год
+        f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36",
+        # f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_{random.randint(15,16)}_{random.randint(0,7)}) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{random.randint(16,17)}.0 Safari/605.1.15",
+        # f"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36",
+        #
+        # f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36",
+        # f"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{firefox_version}.0) Gecko/20100101 Firefox/{firefox_version}.0",
+        # # f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36 Edg/{edge_version}.0.0.0",
+        # f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_{random.randint(15, 16)}_{random.randint(0, 7)}) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{random.randint(16, 17)}.0 Safari/605.1.15",
+        # # f"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36",
+        # # f"Mozilla/5.0 (iPhone; CPU iPhone OS {ios_version}_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{safari_version}.2 Mobile/15E148 Safari/604.1",
+        # f"Mozilla/5.0 (Linux; Android {android_version}; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Mobile Safari/537.36",
+        # # f"Mozilla/5.0 (iPad; CPU OS {ios_version}_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{safari_version}.2 Mobile/15E148 Safari/604.1",
+        # f"Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:{ie_version}.0) like Gecko",
+        # # f"Mozilla/5.0 (Android {android_tablet_version}; Tablet; SM-X716B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36",
+        # f"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:{firefox_version}.0) Gecko/20100101 Firefox/{firefox_version}.0",
+    ]
+    return random.choice(user_agents)
+
+
