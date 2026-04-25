@@ -15,7 +15,6 @@ from dotenv import load_dotenv
 import os
 from config import is_docker_container
 
-load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,8 +23,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -104,17 +101,24 @@ WSGI_APPLICATION = "config.wsgi.application"
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 if is_docker_container():
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL","redis://redis:6379/0")
+    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND","redis://redis:6379/0")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.getenv('POSTGRES_DB'),
             'USER': os.getenv('POSTGRES_USER'),
             'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
-            'HOST': os.getenv('POSTGRES_HOST'),
+            'HOST': os.getenv('POSTGRES_HOST','pg'),
             'PORT': '5432',
         }
     }
 else:
+    load_dotenv()
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
