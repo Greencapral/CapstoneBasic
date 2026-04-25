@@ -13,12 +13,13 @@ services:
 
     # Переменные окружения для приложения
     environment:
+      ENVIRONMENT: docker
       POSTGRES_DB: "${POSTGRES_DB}"
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       POSTGRES_HOST: "${POSTGRES_HOST}"
       SECRET_KEY: "${SECRET_KEY}"
-      REDIS_HOST: "redis"
+      REDIS_HOST: "redis_docker"
       REDIS_PORT: "6379"
       CELERY_BROKER_URL: "redis://redis:6379/0"
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
@@ -45,6 +46,7 @@ services:
     volumes:
       - ./fixtures:/app/fixtures
 
+
   # Сервис базы данных PostgreSQL
   pg:
     # Используем готовый образ PostgreSQL 14 на базе Alpine Linux
@@ -52,6 +54,7 @@ services:
 
     # Переменные окружения для настройки PostgreSQL
     environment:
+      ENVIRONMENT: docker
       # Имя базы данных — берётся из переменной окружения хоста (${PG_DB})
       POSTGRES_DB: ${POSTGRES_DB}
       # Пользователь базы данных — берётся из переменной окружения хоста (${PG_USER})
@@ -73,10 +76,11 @@ services:
     # Проверка работоспособности сервиса (healthcheck)
     healthcheck:
       # Команда для проверки: pg_isready проверяет готовность PostgreSQL
-      test: [ "CMD-SHELL", "pg_isready" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 3s    # Проверяем каждые 1 секунду
       timeout: 2s   # Таймаут ожидания ответа — 1 секунда
       retries: 3    # Количество попыток перед признанием сервиса нерабочим
+
 
   # Сервис Redis для Celery
   redis:
@@ -92,21 +96,35 @@ services:
       timeout: 5s
       retries: 3
 
+
   # Сервис Celery Worker
   celery-worker:
     build:
       context: ./
       dockerfile: docker-build/app/Dockerfile
-    command: celery -A config worker -l INFO
+
+    command: [ "/bin/sh", "/etc/entrypoint.sh" ]
+
     environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      SERVICE_TYPE: "celery-worker"  # Тип сервиса для entrypoint.sh
+      ENVIRONMENT: docker
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_HOST: "${POSTGRES_HOST}"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+      SERVICE_TYPE: "celery-worker"
+
     depends_on:
       redis:
         condition: service_healthy
+      pg:
+        condition: service_healthy
+
     volumes:
-      - ./fixtures:/app/fixtures  # Синхронизируем fixtures для Celery, если нужно
+      - ./fixtures:/app/fixtures
+
+
 
 
   # Сервис Selenium для автоматизации браузера
@@ -120,6 +138,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+
 
 # Определение тома для хранения данных PostgreSQL и Redis
 # Тома создаются Docker и сохраняются между перезапусками контейнеров

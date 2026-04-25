@@ -99,11 +99,13 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+print("IS DOCKER:", is_docker_container())
+print("ENV BROKER:", os.getenv("CELERY_BROKER_URL"))
 
 if is_docker_container():
     SECRET_KEY = os.getenv("SECRET_KEY")
     CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL","redis://redis:6379/0")
-    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND","redis://redis:6379/0")
+    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND","redis://redis:63/0")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -117,8 +119,8 @@ if is_docker_container():
 else:
     load_dotenv()
     SECRET_KEY = os.getenv("SECRET_KEY")
-    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
-    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
+    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6380/0")
+    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6380/0")
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -126,6 +128,7 @@ else:
         }
     }
 
+print("BROKER:", CELERY_BROKER_URL)
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -167,5 +170,4 @@ AUTH_USER_MODEL = "custom_user_app.CustomUser"
 SELENIUM_DRIVER = "chrome"  # или 'firefox', 'edge'
 SELENIUM_HEADLESS = True  # запуск браузера в фоновом режиме (без GUI)
 
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
+
