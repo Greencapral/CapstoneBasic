@@ -27,8 +27,6 @@ def scrape_ozon(search_query, headless=False):
 
     # Инициализируем WebDriver браузера (настраиваем опции и запускаем браузер)
     parser.setup_driver()
-    # parser.warm_up_browser()
-
 
     # Выполняем поиск товаров на Ozon по переданному поисковому запросу
     products_data = search_products_ozon(parser, search_query)

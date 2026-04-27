@@ -87,27 +87,14 @@ class Parser:
         options.add_argument("--disable-dev-shm-usage")  # Обход ограничений по памяти в Docker
         if is_docker_container():
             options.binary_location = "/usr/bin/chromium"  # Указываем путь к Chromium
-        # options.add_argument("--disable-gpu")
+            options.add_argument("--disable-gpu")
         if self.headless:
-            print('!!!', self.headless)
             options.add_argument("--headless=new")  # Обновлённый headless-режим
         options.add_argument(
             "--disable-blink-features=AutomationControlled")  # Отключение признаков автоматизации в Blink
         options.add_experimental_option(
             "excludeSwitches", ["enable-automation"]  # Исключение переключателя автоматизации
         )
-        # options.add_experimental_option("useAutomationExtension", False)  # Отключение расширения автоматизации
-        # options.add_argument("--disable-blink-features=AutomationControlled")
-
-        # Дополнительные аргументы для минимизации детектирования автоматизации
-        # options.add_argument("--disable-extensions")  # Отключение всех расширений браузера
-        # options.add_argument("--disable-plugins")  # Отключение плагинов
-        # options.add_argument("--disable-popup-blocking")  # Отключение блокировки всплывающих окон
-        # options.add_argument("--profile-directory=Default")  # Использование стандартного профиля браузера
-        # options.add_argument(
-        #     "--disable-background-timer-throttling")  # Отключение ограничения таймеров в фоновых вкладках
-        # options.add_argument("--disable-backgrounding-occluded-windows")  # Отключение приостановки фоновых окон
-        # options.add_argument("--disable-renderer-backgrounding")  # Отключение фоновой приостановки рендерера
         options.add_argument("--disable-features=TranslateUI")
         options.add_argument("--disable-component-extensions-with-background-pages")
         # Сетевые настройки
@@ -117,34 +104,6 @@ class Parser:
 
         # Настройки отображения
         options.add_argument("--window-size=1920,1080")  # Установка размера окна браузера (1920×1080 px)
-        # USER_AGENTS = [
-            # Windows
-            # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Safari/537.36",
-            # "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
-            # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Safari/537.36 Edg/120.0.2210.144",
-            #
-            # # macOS
-            # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-            #
-            # # Linux
-            # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.112 Safari/537.36",
-            # # обновлена версия Chrome
-            #
-            # # Мобильные устройства
-            # "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
-            # "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36",
-            #
-            # # Новые добавления
-            # "Mozilla/5.0 (iPad; CPU OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
-            # # iPad + Safari
-            # "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko",
-            # # Windows + IE 11 (для старых сайтов)
-            # "Mozilla/5.0 (Android 13; Tablet; SM-X716B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.83 Safari/537.36",
-            # # Android-планшет
-            # "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:115.0) Gecko/20100101 Firefox/115.0"
-            # Linux + Firefox (альтернатива Chrome)
-        # ]
-        # user_agent = random.choice(USER_AGENTS)
         user_agent = get_random_user_agent()
 
         options.add_argument(f"--user-agent={user_agent}")
@@ -162,10 +121,6 @@ class Parser:
                 )
             else:
                 # Локально используем стандартный Chrome WebDriver
-                # self.driver = webdriver.Remote(
-                #     command_executor='http://localhost:4444/wd/hub',
-                #     options=options
-                # )
                 self.driver = webdriver.Chrome(service=service, options=options)
 
             # Скрипт для скрытия признака автоматизации: переопределяем свойство navigator.webdriver
@@ -366,110 +321,71 @@ class Parser:
         except Exception as e:
             print(f"Ошибка при скроллинге: {e}")
 
-    def warm_up_browser(self):
-        """«Разминка» браузера перед парсингом Ozon"""
-        # Переходим на Google для имитации «поиска»
-        self.driver.get("https://www.google.com")
-        time.sleep(random.uniform(2, 4))
-
-        # Имитируем ввод запроса в поиске
-        try:
-            search_box = self.driver.find_element(By.NAME, "q")
-            for char in "Ozon":
-                search_box.send_keys(char)
-                time.sleep(random.uniform(0.1, 0.3))
-            time.sleep(1)
-        except:
-            pass
-
 
 def get_chrome_version():
+    """Определяет основную версию браузера Chrome/Chromium в системе.
+    Функция пытается получить версию Chrome через системные команды для разных ОС:
+    - в Windows — через реестр (reg query);
+    - в Linux/macOS — через запуск браузера с флагом --version.
+
+    Returns:
+        str or None: основная версия Chrome (например, "123") при успешном
+            определении, None — если версию не удалось получить или произошла ошибка.
+
+    Raises:
+        Exception: перехватывается внутри функции, выводится сообщение об ошибке,
+            но не пробрасывается дальше.
+    """
     try:
-        # Windows
+        # Попытка определить версию Chrome в ОС Windows через реестр.
         cmd = 'reg query "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon" /v version'
         result = subprocess.run(cmd, capture_output=True, shell=True, text=True)
         if result.returncode == 0:
+            # Извлекаем версию из вывода команды с помощью регулярного выражения.
+            # Ожидаемый формат: строка с "version", "REG_SZ" и номером версии.
             version = re.search(r'version\s+REG_SZ\s+(\d+\.\d+\.\d+\.\d+)', result.stdout)
             if version:
+                # Возвращаем только основной номер версии (первое число до точки).
                 return version.group(1).split('.')[0]
 
-        # Linux/macOS
+        # Попытка определить версию Chrome/Chromium в Linux или macOS.
+        # Пробуем несколько возможных команд запуска браузера.
         for cmd in ['google-chrome --version', 'chrome --version', 'chromium-browser --version']:
             result = subprocess.run(cmd, capture_output=True, shell=True, text=True)
             if result.returncode == 0:
+                # Ищем номер версии в выводе команды. Учитываем варианты "Chrome" и "Chromium".
                 version = re.search(r'Chrome\s+(\d+)|Chromium\s+(\d+)', result.stdout)
                 if version:
+                    # Возвращаем номер версии из первой или второй группы захвата.
                     return version.group(1) or version.group(2)
     except Exception as e:
+        # При любой ошибке выводим сообщение и продолжаем выполнение.
         print(f"Ошибка определения версии Chrome: {e}")
+    # Если ни один способ не сработал или произошла ошибка, возвращаем None.
     return None
 
 
-def generate_firefox_version():
-    """
-    Firefox: версии выходят примерно раз в 4 недели.
-    Актуальные версии — в диапазоне 115–130 (2023–2024 гг.).
-    """
-    return random.randint(115, 130)
-
-def generate_ios_version():
-    """
-    iOS: мажорные версии выходят раз в год.
-    Актуальные версии: 16, 17, 18 (бета).
-    """
-    versions = [16, 17]
-    # 20 % шанс получить бета‑версию 18
-    if random.random() < 0.2:
-        versions.append(18)
-    return random.choice(versions)
-
-def generate_android_version():
-    """
-    Android: мажорные версии выходят раз в год.
-    Актуальные версии: 12, 13, 14.
-    Приоритет: 14 (50 %), 13 (30 %), 12 (20 %).
-    """
-    choices = [14, 13, 12]
-    weights = [0.5, 0.3, 0.2]
-    return random.choices(choices, weights=weights)[0]
-
-def generate_ie_version():
-    """
-    Internet Explorer: последняя версия — 11.
-    IE больше не обновляется, но используется для совместимости.
-    Всегда возвращаем 11, с небольшим шансом (5 %) — 9 или 10.
-    """
-    # 90 % — IE 11, 5 % — IE 10, 5 % — IE 9
-    choices = [11, 10, 9]
-    weights = [0.9, 0.05, 0.05]
-    return random.choices(choices, weights=weights)[0]
-
 
 def get_random_user_agent():
+    """Генерирует случайный User‑Agent на основе текущей версии Chrome.
+    На текущий момент возвращает один шаблон User‑Agent для Windows с подстановкой
+    актуальной версии Chrome. В перспективе можно расширить список шаблонов
+    для разных ОС и браузеров.
+
+    Returns:
+        str: строка User‑Agent, например:
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+            (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+    """
     chrome_version = get_chrome_version()
-    firefox_version = generate_firefox_version()
-    ios_version = generate_ios_version()
-    android_version = generate_android_version()
-    ie_version = generate_ie_version()
-    android_tablet_version = generate_android_version()
+
+    # Список шаблонов User‑Agent. На данный момент содержит один актуальный шаблон.
     user_agents = [
-        # Актуальные версии на 2024 год
+        # Шаблон для Windows 10 с подстановкой версии Chrome.
+        # Остальные части строки фиксированы и соответствуют стандартному формату.
         f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36",
-        # f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_{random.randint(15,16)}_{random.randint(0,7)}) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{random.randint(16,17)}.0 Safari/605.1.15",
-        # f"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36",
-        #
-        # f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36",
-        # f"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{firefox_version}.0) Gecko/20100101 Firefox/{firefox_version}.0",
-        # # f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36 Edg/{edge_version}.0.0.0",
-        # f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_{random.randint(15, 16)}_{random.randint(0, 7)}) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{random.randint(16, 17)}.0 Safari/605.1.15",
-        # # f"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36",
-        # # f"Mozilla/5.0 (iPhone; CPU iPhone OS {ios_version}_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{safari_version}.2 Mobile/15E148 Safari/604.1",
-        # f"Mozilla/5.0 (Linux; Android {android_version}; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Mobile Safari/537.36",
-        # # f"Mozilla/5.0 (iPad; CPU OS {ios_version}_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{safari_version}.2 Mobile/15E148 Safari/604.1",
-        # f"Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:{ie_version}.0) like Gecko",
-        # # f"Mozilla/5.0 (Android {android_tablet_version}; Tablet; SM-X716B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36",
-        # f"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:{firefox_version}.0) Gecko/20100101 Firefox/{firefox_version}.0",
     ]
+    # Возвращаем случайно выбранный User‑Agent из списка (в текущем случае — единственный).
     return random.choice(user_agents)
 
 

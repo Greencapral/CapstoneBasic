@@ -24,7 +24,7 @@ redis:
 ifeq ($(SYSTEM),Windows)
 	@chcp 65001 >nul
 	@echo Проверка статуса Redis-контейнера...
-	@docker start redis-server >nul 2>&1 || docker run -d --name redis-server -p 6379:6379 redis
+	@docker start redis-server >nul 2>&1 || docker run -d --name redis-server -p 6380:6379 redis
 	@echo ✓ Контейнер Redis запущен (или создан)
 else
 	@echo Запуск Redis для Unix-систем...

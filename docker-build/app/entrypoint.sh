@@ -1,30 +1,56 @@
 #!/bin/sh
-set -e
+# Шебанг: указывает, что скрипт должен выполняться с помощью оболочки sh.
 
+set -e
+# Немедленно завершает выполнение скрипта при возникновении любой ошибки.
+# Гарантирует, что последующие команды не будут запущены, если какая‑то из предыдущих завершилась с ошибкой.
+
+# Условная логика для определения типа сервиса и выполнения соответствующих действий.
+# Поведение скрипта зависит от значения переменной окружения SERVICE_TYPE.
 if [ "$SERVICE_TYPE" = "web" ]; then
+    # Блок для запуска веб‑сервера с предварительной настройкой окружения.
+
     echo "Apply migrations.."
+    # Применяет миграции базы данных к текущей схеме.
+    # Создаёт/обновляет таблицы в БД согласно моделям Django.
     python manage.py migrate
 
     echo "Load initial data from fixture..."
+    # Загружает начальные данные в базу данных из JSON‑файлов‑фикстур.
+    # Фикстуры содержат предопределённые данные для инициализации приложения.
     python manage.py loaddata /app/fixtures/customusers_fixture.json
     python manage.py loaddata /app/fixtures/marketplace_fixture.json
 
     echo "Collect static files.."
+    # Собирает все статические файлы (CSS, JS, изображения) в единую директорию.
+    # Подготавливает статические ресурсы для обслуживания веб‑сервером.
     python manage.py collectstatic --noinput
 
     echo "Starting Gunicorn server..."
-    gunicorn config.wsgi:application \
-      --bind 0.0.0.0:8000 \
-      --workers 2 \
-      --timeout 120 \
-      --access-logfile - \
-      --error-logfile -
+    # Запускает веб‑сервер Gunicorn для обслуживания Django‑приложения.
+    # Привязывает сервер ко всем сетевым интерфейсам на порту 8000.
+    # Запускает 2 рабочих процесса для обработки запросов.
+    # Устанавливает таймаут для обработки запроса — 120 секунд.
+    # Выводит логи доступа в stdout (консоль).
+    # Выводит логи ошибок в stdout (консоль).
+
+    gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120 --access-logfile - --error-logfile -
 
 elif [ "$SERVICE_TYPE" = "celery-worker" ]; then
+    # Блок для запуска воркера Celery для обработки фоновых задач.
+
     echo "Starting Celery worker..."
-    celery -A config worker -l INFO
+    # Запускает воркер Celery, который будет выполнять асинхронные задачи.
+    # -A config: указывает на модуль конфигурации Celery (config).
+    # worker: команда для запуска воркера.
+    # -l INFO: устанавливает уровень логирования INFO (вывод информационных сообщений).
+    celery -A config worker -l INFO --pool=solo
 
 else
+    # Обрабатывает случай, когда SERVICE_TYPE имеет неизвестное значение.
+
     echo "Unknown SERVICE_TYPE: $SERVICE_TYPE"
+    # Выводит сообщение об ошибке с указанием некорректного значения SERVICE_TYPE.
     exit 1
+    # Завершает выполнение скрипта с кодом ошибки 1, сигнализируя о сбое.
 fi

@@ -1,17 +1,16 @@
-# Конфигурация Docker Compose для запуска приложения и базы данных
-# Описывает сервисы: myapp (веб‑приложение), pg (PostgreSQL), Redis, Celery Worker и Selenium
+# docker-compose.yml
+# Основная конфигурация сервисов приложения
 
 services:
-  # Сервис веб‑приложения
-  myapp:
-    # Настройки сборки образа
-    build:
-      # Контекст сборки — текущая директория (где расположен docker-compose.yml)
-      context: ./
-      # Путь к Dockerfile относительно контекста сборки
-      dockerfile: docker-build/app/Dockerfile
 
-    # Переменные окружения для приложения
+  # --- Web приложение ---
+  myapp:
+    # Сборка образа
+    build:
+      context: ./  # Корень проекта
+      dockerfile: docker-build/app/Dockerfile  # Dockerfile приложения
+
+    # Переменные окружения приложения
     environment:
       ENVIRONMENT: docker
       POSTGRES_DB: "${POSTGRES_DB}"
@@ -25,71 +24,70 @@ services:
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
       SELENIUM_HOST: "selenium"
       SELENIUM_PORT: "4444"
-      SERVICE_TYPE: "web"  # Тип сервиса для entrypoint.sh
+      SERVICE_TYPE: "web"  # Тип сервиса (используется в entrypoint)
 
-    # Команда запуска приложения внутри контейнера
+    # Точка входа контейнера
     command: ["/bin/sh", "/etc/entrypoint.sh"]
 
-    # Проброс портов: внешний порт 8000 → внутренний порт 8000 контейнера
+    # Проброс портов (host:container)
     ports:
       - "8000:8000"
 
-    # Условие запуска: сервис myapp стартует только после того, как pg станет «здоровым»
+    # Зависимости от сервисов
     depends_on:
       pg:
-        condition: service_healthy  # Ждём, пока pg пройдёт healthcheck
+        condition: service_healthy  # Ждём готовность БД
       redis:
-        condition: service_healthy
+        condition: service_healthy  # Ждём готовность Redis
       selenium:
-        condition: service_started
+        condition: service_started  # Достаточно запуска
 
+    # Монтирование данных
     volumes:
       - ./fixtures:/app/fixtures
 
 
-  # Сервис базы данных PostgreSQL
+  # --- PostgreSQL ---
   pg:
-    # Используем готовый образ PostgreSQL 14 на базе Alpine Linux
-    image: postgres:14-trixie
+    image: postgres:14-trixie  # Готовый образ PostgreSQL
 
-    # Переменные окружения для настройки PostgreSQL
+    # Конфигурация БД
     environment:
       ENVIRONMENT: docker
-      # Имя базы данных — берётся из переменной окружения хоста (${PG_DB})
       POSTGRES_DB: ${POSTGRES_DB}
-      # Пользователь базы данных — берётся из переменной окружения хоста (${PG_USER})
       POSTGRES_USER: ${POSTGRES_USER}
-      # Пароль пользователя — берётся из переменной окружения хоста (${PG_PASSWORD})
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      # Директория для хранения данных PostgreSQL внутри контейнера
-      PGDATA: /var/lib/postgresql/18/docker
+      PGDATA: /var/lib/postgresql/18/docker  # Каталог данных
 
-    # Проброс портов: внешний порт 5432 → внутренний порт 5432
-    # Позволяет подключаться к БД извне (например, через psql или GUI‑клиент)
     ports:
-      - "5432:5432"
+      - "5432:5432"  # Доступ к БД извне
 
-    # Монтирование тома для сохранения данных БД между перезапусками контейнеров
+    # Хранение данных
     volumes:
-      - pg-data:/var/lib/postgresql/data  # Данные хранятся в томе pg-data
+      - pg-data:/var/lib/postgresql/data
 
-    # Проверка работоспособности сервиса (healthcheck)
+    # Проверка готовности БД
     healthcheck:
-      # Команда для проверки: pg_isready проверяет готовность PostgreSQL
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 3s    # Проверяем каждые 1 секунду
-      timeout: 2s   # Таймаут ожидания ответа — 1 секунда
-      retries: 3    # Количество попыток перед признанием сервиса нерабочим
+      interval: 3s
+      timeout: 2s
+      retries: 3
 
 
-  # Сервис Redis для Celery
+  # --- Redis ---
   redis:
     image: redis:7-alpine
+
     ports:
       - "6379:6379"
+
     volumes:
       - redis-data:/data
+
+    # Включаем persistence
     command: redis-server --appendonly yes
+
+    # Проверка доступности Redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -97,14 +95,15 @@ services:
       retries: 3
 
 
-  # Сервис Celery Worker
+  # --- Celery Worker ---
   celery-worker:
     build:
       context: ./
       dockerfile: docker-build/app/Dockerfile
 
-    command: [ "/bin/sh", "/etc/entrypoint.sh" ]
+    command: ["/bin/sh", "/etc/entrypoint.sh"]
 
+    # Переменные окружения воркера
     environment:
       ENVIRONMENT: docker
       POSTGRES_DB: "${POSTGRES_DB}"
@@ -115,6 +114,7 @@ services:
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
       SERVICE_TYPE: "celery-worker"
 
+    # Зависимости
     depends_on:
       redis:
         condition: service_healthy
@@ -125,14 +125,15 @@ services:
       - ./fixtures:/app/fixtures
 
 
-
-
-  # Сервис Selenium для автоматизации браузера
+  # --- Selenium (браузер для тестов) ---
   selenium:
     image: selenium/standalone-chrome:latest
-    shm_size: 2gb
+    shm_size: 2gb  # Увеличенная shared memory (важно для Chrome)
+
     ports:
       - "4444:4444"
+
+    # Проверка готовности Selenium
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
       interval: 10s
@@ -140,9 +141,7 @@ services:
       retries: 5
 
 
-
-# Определение тома для хранения данных PostgreSQL и Redis
-# Тома создаются Docker и сохраняются между перезапусками контейнеров
+# --- Томa ---
 volumes:
-  pg-data:
-  redis-data:
+  pg-data:     # Данные PostgreSQL
+  redis-data:  # Данные Redis

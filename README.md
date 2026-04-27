@@ -50,7 +50,7 @@
 * API: Django REST Framework 
 * База данных: PostgreSQL 14+ 
 * Контейнеризация: Docker 20.10+, Docker Compose 3.8+ 
-* Фоновые задачи (на этапе реализации): Celery 5.3+, Redis 7.0+ 
+* Фоновые задачи: Celery 5.3+, Redis 7.0+ 
 * Парсинг: ~~feedparser~~, ~~requests~~, ~~Scrapy~~, Selenium 
 * Деплой: Docker контейнеры
 
